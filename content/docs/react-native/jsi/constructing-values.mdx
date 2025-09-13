@@ -1,0 +1,94 @@
+---
+title: Constructing JSI values
+description: A cheatsheet for how to construct the various jsi::Value types.
+icon: DiamondPlus
+---
+
+There are various subclasses of `jsi::Value` that represent all of the primitive JSI types (consisting of all the ECMAScript [primitives](https://developer.mozilla.org/en-US/docs/Glossary/Primitive) plus some JSI-specific primitives like `jsi::HostObject`). I always find it hard to remember how to construct them, so here's a cheatsheet that I use for reference.
+
+As I'm primarily an iOS/macOS developer, beware that some examples (e.g. the ones involving `NSString` and `NSNumber`) are Apple-specific, and thus assume that we're working in Objective-C++ file. In future, I'd like to make all platform-specific cases clear, as well as providing examples for Android (JNI) and Windows (C++/WinRT).
+
+## `jsi::String`
+
+```cpp
+jsi::String::createFromAscii(*rt, "A C string!");
+jsi::String::createFromUtf8(*rt, @"An NSString".UTF8String);
+```
+
+{/* TODO: An example of using `createFromUtf8()` with a C string. */}
+
+## `jsi::Number`
+
+```cpp
+jsi::Value(123); // C number
+jsi::Value([NSNumber numberWithDouble:3.1415926].doubleValue); // NSNumber longhand
+jsi::Value((@3.1415926).doubleValue); // LLVM shorthand to instantiate an NSNumber
+```
+
+## `jsi::Boolean`
+
+```cpp
+jsi::Value(TRUE); // Boolean (unsigned char)
+jsi::Value(YES); // Obj-C BOOL (signed char)
+
+// The following do not work:
+// true, false, @(YES), @(NO), kCFBooleanTrue, kCFBooleanFalse, 0, 1
+```
+
+## `jsi::Null`
+
+```cpp
+jsi::Value(nullptr);
+jsi::Value::null();
+```
+
+## `jsi::Undefined`
+
+```cpp
+jsi::Value::undefined();
+```
+
+## `jsi::Object`
+
+```cpp
+jsi::Object(*rt);
+```
+
+## `jsi::HostObject`
+
+```cpp
+jsi::Object::createFromHostObject(*rt, std::make_shared<jsi::HostObject>());
+```
+
+## `jsi::BigInt`
+
+```cpp
+jsi::BigInt::createBigIntFromInt64(*rt, -9223372036854775808);
+jsi::BigInt::createBigIntFromUint64(*rt, 18446744073709551615);
+```
+
+## `jsi::Symbol`
+
+I think you can only clone them from the JS context - not create them afresh.
+
+## `jsi::Function`
+
+```cpp
+// The host function
+auto sum = [] (
+  jsi::Runtime& rt,
+  const jsi::Value& thisValue,
+  const jsi::Value* arguments,
+  size_t count
+) -> jsi::Value {
+  return jsi::Value(arguments[0].asNumber() + arguments[1].asNumber());
+};
+
+// The JSI function
+jsi::Function::createFromHostFunction(
+  *rt,
+  jsi::PropNameID::forAscii(*rt, "sum"), // The name for the function in JS
+  2, // The number of arguments
+  sum // The host function
+);
+```
