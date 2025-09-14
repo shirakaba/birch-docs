@@ -4,4 +4,82 @@ description: Crossing threads in JSI
 icon: Spool
 ---
 
-TODO
+# A non-JSI example to illustrate
+
+Threading _could_ be easy, it's just that JSI has no first-class APIs for it. Here I show an Old Architecture React Native Windows native module that demonstrates how easy thread-crossing can be with some decent primitives. Here, it's easy because we have easy access to `UIDispatcher` and have `onSuccess` and `onFailure` handlers passed to us.
+
+```cpp
+#pragma once
+
+#include "JSValue.h"
+#include "NativeModules.h"
+#include <winrt/Windows.Security.Authentication.Web.h>
+
+using namespace winrt::Microsoft::ReactNative;
+using namespace winrt::Windows::Security::Authentication::Web;
+
+namespace MyModule
+{
+
+REACT_MODULE(ReactNativeModule, L"MyModule")
+struct ReactNativeModule
+{
+  REACT_INIT(Initialize)
+  void Initialize(ReactContext const &reactContext) noexcept
+  {
+    m_reactContext = reactContext;
+  }
+
+public:
+  REACT_METHOD(authenticate)
+    void authenticate(
+      std::string authUri,
+      std::string redirectUri,
+      std::function<void(std::string)>&& onSuccess,
+      std::function<void(std::string)>&& onFailure
+    ) noexcept
+  {
+    // WebAuthenticationBroker::AuthenticateAsync() must be called on the UI
+    // thread, otherwise the app crashes.
+    m_reactContext.UIDispatcher().Post([authUri, redirectUri, onSuccess, onFailure]() {
+      try {
+        auto startUri = winrt::Windows::Foundation::Uri(winrt::to_hstring(authUri));
+        auto endUri = winrt::Windows::Foundation::Uri(winrt::to_hstring(redirectUri));
+
+        // Based on:
+        // https://github.com/microsoft/Windows-universal-samples/blob/main/Samples/WebAuthenticationBroker/cpp/Scenario2_oAuthFacebook.xaml.cpp
+
+        WebAuthenticationBroker::AuthenticateAsync(
+          WebAuthenticationOptions::None,
+          startUri,
+          endUri
+        )
+        .Completed(
+          [onSuccess, onFailure]
+          (
+            IAsyncOperation<WebAuthenticationResult> const& operation,
+            AsyncStatus const status
+          ) noexcept {
+          auto result = operation.GetResults();
+          if (result.ResponseStatus() == WebAuthenticationStatus::Success) {
+            onSuccess(winrt::to_string(result.ResponseData()));
+          } else if (result.ResponseStatus() == WebAuthenticationStatus::ErrorHttp) {
+            onFailure("HTTP Status " + std::to_string(result.ResponseErrorDetail()));
+          } else {
+            onFailure("Authentication failed, or was cancelled.");
+          }
+        });
+      } catch (const std::exception& ex) {
+        onFailure("Exception: " + std::string(ex.what()));
+      }
+    });
+  }
+
+  private:
+    ReactContext m_reactContext{nullptr};
+};
+
+} // namespace MyModule
+```
+
+This becomes a lot more fiddly in JSI because we need to get access to the `UIDispatcher` ourselves, not to mention managing a `Promise`. But let's not be discouraged!
