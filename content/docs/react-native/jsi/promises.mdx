@@ -12,7 +12,7 @@ JSI doesn't have a first-class `Promise` API, so we have to make do. I like to u
 
 In this example, we create a JSI `HostObject` with an API `getSizeOfWebPage(url: string): Promise<number>`. It creates a `Promise` before calling an iOS API, `NSURLSessionDataTask`, to perform native work asynchronously. Once the native work completes, we need to use `jsCallInvoker` to safely interact with the JavaScript runtime again (namely, to resolve/reject the `Promise`).
 
-```cpp
+```objective-cpp
 #import "MyHostObject.h"
 #import <Foundation/Foundation.h>
 #import <React/RCTBridge+Private.h>

@@ -10,7 +10,7 @@ As I'm primarily an iOS/macOS developer, beware that some examples (e.g. the one
 
 ## `jsi::String`
 
-```cpp
+```objective-cpp
 jsi::String::createFromAscii(*rt, "A C string!");
 jsi::String::createFromUtf8(*rt, @"An NSString".UTF8String);
 ```
@@ -19,7 +19,7 @@ jsi::String::createFromUtf8(*rt, @"An NSString".UTF8String);
 
 ## `jsi::Number`
 
-```cpp
+```objective-cpp
 jsi::Value(123); // C number
 jsi::Value([NSNumber numberWithDouble:3.1415926].doubleValue); // NSNumber longhand
 jsi::Value((@3.1415926).doubleValue); // LLVM shorthand to instantiate an NSNumber
@@ -27,7 +27,7 @@ jsi::Value((@3.1415926).doubleValue); // LLVM shorthand to instantiate an NSNumb
 
 ## `jsi::Boolean`
 
-```cpp
+```objective-cpp
 jsi::Value(TRUE); // Boolean (unsigned char)
 jsi::Value(YES); // Obj-C BOOL (signed char)
 
@@ -37,32 +37,32 @@ jsi::Value(YES); // Obj-C BOOL (signed char)
 
 ## `jsi::Null`
 
-```cpp
+```objective-cpp
 jsi::Value(nullptr);
 jsi::Value::null();
 ```
 
 ## `jsi::Undefined`
 
-```cpp
+```objective-cpp
 jsi::Value::undefined();
 ```
 
 ## `jsi::Object`
 
-```cpp
+```objective-cpp
 jsi::Object(*rt);
 ```
 
 ## `jsi::HostObject`
 
-```cpp
+```objective-cpp
 jsi::Object::createFromHostObject(*rt, std::make_shared<jsi::HostObject>());
 ```
 
 ## `jsi::BigInt`
 
-```cpp
+```objective-cpp
 jsi::BigInt::createBigIntFromInt64(*rt, -9223372036854775808);
 jsi::BigInt::createBigIntFromUint64(*rt, 18446744073709551615);
 ```
@@ -73,7 +73,7 @@ I think you can only clone them from the JS context - not create them afresh.
 
 ## `jsi::Function`
 
-```cpp
+```objective-cpp
 // The host function
 auto sum = [] (
   jsi::Runtime& rt,

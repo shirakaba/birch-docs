@@ -20,5 +20,12 @@ export const docs = defineDocs({
 export default defineConfig({
   mdxOptions: {
     remarkPlugins: [remarkAdmonition],
+    rehypeCodeOptions: {
+      langs: ["ts", "js", "html", "tsx", "mdx", "objective-cpp"],
+      themes: {
+        light: "catppuccin-latte",
+        dark: "catppuccin-mocha",
+      },
+    },
   },
 });
