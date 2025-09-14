@@ -18,7 +18,7 @@ The `cpp-lib` template [explicitly supports](https://github.com/microsoft/react-
 
 </Callout>
 
-This boilerplate will carry on from that step. By the end, we'll have a native module that installs a JSI `HostObject` onto the global object upon initialisation.
+This boilerplate will carry on from that step. By the end, we'll have a TurboModule that installs a JSI `HostObject` onto the global object upon initialisation.
 
 # Making our JSI module
 
@@ -62,6 +62,12 @@ interface MyModule extends TurboModule {
 ### `ReactPackageProvider.{h,cpp}`
 
 These two C++ files implement the native module's package provider. We'll take the default [`ReactPackagerProvider.h`](https://github.com/microsoft/react-native-windows/blob/d1f46f7a19b38d8ea60fcb697dae154849ec7520/vnext/templates/cpp-lib/windows/MyLib/ReactPackageProvider.h) and [`ReactPackagerProvider.cpp`](https://github.com/microsoft/react-native-windows/blob/d1f46f7a19b38d8ea60fcb697dae154849ec7520/vnext/templates/cpp-lib/windows/MyLib/ReactPackageProvider.cpp) files created by `react-native init-windows`; no need to change them.
+
+<Callout type='info'>
+
+By default, this native module is set up to be a `TurboModule`, as [`ReactPackagerProvider.cpp`](https://github.com/microsoft/react-native-windows/blob/d1f46f7a19b38d8ea60fcb697dae154849ec7520/vnext/templates/cpp-lib/windows/MyLib/ReactPackageProvider.cpp#L17) passes `true` to the [`useTurboModules`](https://github.com/microsoft/react-native-windows/blob/614427434ed1c122d4b10af098d2b50740e83f73/vnext/Microsoft.ReactNative.Cxx/ModuleRegistration.cpp#L18) arg.
+
+</Callout>
 
 ### `ReactNativeModule.h`
 
