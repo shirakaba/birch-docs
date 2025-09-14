@@ -1,0 +1,163 @@
+---
+title: Apple platforms
+description: Creating a simple JSI module for Apple platforms.
+icon: Apple
+---
+
+# ① The native module
+
+## `MyModule.ts`
+
+This file provides the TypeScript interface, and an installation command, for the native module.
+
+```ts
+import { type TurboModule, TurboModuleRegistry } from "react-native";
+
+declare global {
+  /** Will be defined once you've called install(). */
+  let MyHostObject: MyHostObjectType | undefined;
+}
+
+interface MyHostObjectType {
+  /** Returns a UUID. */
+  makeUUID(): string;
+}
+
+/**
+ * A convenience function for looking up MyModule and calling install() on it.
+ *
+ * Call this in your entrypoint file in order to populate global.MyHostObject.
+ */
+export function install() {
+  const turboModule = TurboModuleRegistry.get<MyModule>("MyModule");
+  if (!turboModule) {
+    throw new Error(`Failed to find "MyModule" in TurboModuleRegistry.`);
+  }
+  turboModule.install();
+}
+
+interface MyModule extends TurboModule {
+  install(): void;
+}
+```
+
+## `MyModule.h`
+
+This is the Objective-C++ **header** for the native module.
+
+```cpp
+#import <React/RCTBridgeModule.h>
+
+@interface MyModule : NSObject <RCTBridgeModule>
+@end
+```
+
+Remember to add this to your Xcode project!
+
+## `MyModule.mm`
+
+This is the Objective-C++ **implementation** for the native module.
+
+```objective-cpp
+#import <React/RCTBridge+Private.h>
+#import <jsi/jsi.h>
+#import "MyModule.h"
+#import "MyHostObject.h"
+
+using namespace facebook;
+
+@implementation MyModule
+
+RCT_EXPORT_MODULE()
+
++ (BOOL)requiresMainQueueSetup
+{
+  return YES;
+}
+
+// Installing the bindings as a blocking synchronous method avoids a race
+// condition when hot module reloading (that crashes the app).
+// https://github.com/margelo/react-native-quick-crypto/blob/main/ios/QuickCryptoModule.mm
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(install) {
+  NSLog(@"Installing JSI bindings for MyModule...");
+
+  RCTBridge* bridge = [RCTBridge currentBridge];
+  RCTCxxBridge* cxxBridge = (RCTCxxBridge*)bridge;
+  if (cxxBridge == nil) {
+    return @false;
+  }
+
+  jsi::Runtime *runtime = (jsi::Runtime *)cxxBridge.runtime;
+  if (!runtime) {
+    return @false;
+  }
+
+  runtime->global().setProperty(
+    *runtime,
+    "MyHostObject",
+    jsi::Object::createFromHostObject(*runtime, std::make_unique<MyHostObject>())
+  );
+
+  NSLog(@"... Successfully installed JSI bindings for MyModule!");
+  return @true;
+}
+
+@end
+```
+
+Remember to add this to your Xcode project!
+
+# ② The JSI Host Object
+
+## `MyHostObject.h`
+
+This is the Objective-C++ **header** for the `jsi::HostObject`.
+
+```cpp
+#import <jsi/jsi.h>
+
+using namespace facebook;
+
+class JSI_EXPORT MyHostObject : public jsi::HostObject {
+  public:
+    MyHostObject();
+
+  jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override;
+};
+```
+
+Remember to add this to your Xcode project!
+
+## `MyHostObject.mm`
+
+This is the Objective-C++ **implementation** for the `jsi::HostObject`. It implements a `makeUUID()` function.
+
+```objective-cpp
+#import <Foundation/Foundation.h>
+#import <React/RCTBridge+Private.h>
+#import <ReactCommon/RCTTurboModule.h>
+#import <React/RCTBundleURLProvider.h>
+#import "MyHostObject.h"
+
+MyHostObject::MyHostObject(){}
+
+jsi::Value MyHostObject::get(jsi::Runtime &rt, const jsi::PropNameID &propName)
+{
+  std::string name = propName.utf8(rt);
+  if(name == "makeUUID"){
+    return jsi::Function::createFromHostFunction(
+      rt,
+      jsi::PropNameID::forAscii(rt, name),
+      0,
+      [this](jsi::Runtime &rt, const jsi::Value &thisValue, const jsi::Value *arguments, size_t) -> jsi::Value {
+        NSString *uuidString = [[NSUUID UUID] UUIDString];
+        return jsi::String::createFromUtf8(runtime, [uuidString UTF8String]);
+      }
+    );
+  }
+
+  return jsi::Value::undefined();
+}
+```
+
+Remember to add this to your Xcode project!

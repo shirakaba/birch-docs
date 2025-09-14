@@ -1,0 +1,41 @@
+---
+title: Creating a JSI module
+description: Boilerplates for creating a simple JSI module
+icon: Blocks
+index: true
+---
+
+# About JSI modules
+
+JSI, TurboModules, Codegen, and New Architecture are often talked about in the same breath as if they're all part of the same thing, but in actuality, they're not. You can create JSI-based TurboModules without Codegen, and they can run on Old Architecture, at that.
+
+I've never got on well with the official guides for [creating a TurboModule](https://reactnative.dev/docs/turbo-native-modules-introduction). The Codegen step has a massive surface area for failure, and trying to hide all that complexity away using a CLI tool just prevents developers from properly mastering the fundamentals.
+
+I prefer to build my JSI modules from zero. No CLI tool, no Codegen, no unknowns. It only takes a few files.
+
+## What do you mean by "JSI module"?
+
+I'm avoiding saying "TurboModule" because in Old Architecture, native modules seem to be registered into both `NativeModules` and `TurboModuleRegistry`. In other words, **both** of these calls return a module:
+
+```ts
+import { NativeModules, TurboModuleRegistry } from "react-native";
+
+// ① TurboModule
+const MyModule = TurboModuleRegistry.get("MyModule");
+
+// ② Legacy native module
+const { MyModule } = NativeModules;
+```
+
+{/* As the migration from Old Architecture to New Architecture was a gradual one, there is a certain degree of support for both TurboModules and legacy modules (I'm not sure whether to call them [Modules](https://github.com/microsoft/react-native-windows/blob/614427434ed1c122d4b10af098d2b50740e83f73/vnext/Microsoft.ReactNative.Cxx/ModuleRegistration.cpp#L23), [Native Modules](https://github.com/microsoft/react-native-windows/blob/614427434ed1c122d4b10af098d2b50740e83f73/vnext/Shared/NativeModuleProvider.h#L34), or [Attributed Modules](https://github.com/microsoft/react-native-windows/blob/614427434ed1c122d4b10af098d2b50740e83f73/vnext/Microsoft.ReactNative.Cxx/ModuleRegistration.cpp#L18)), even in Old Architecture. */}
+
+To add to the confusion, you can write a TurboModule that uses a _mixture_ of both the legacy Batched Bridge APIs (e.g. `RCT_EXPORT_METHOD`) and JSI code (by grabbing the JSI Runtime from the Bridge, as you'll see below). React Native Windows makes it particularly clear that they're not genetically that different, as you can make a module be turbo or non-turbo simply by [flipping a boolean](https://github.com/microsoft/react-native-windows/blob/614427434ed1c122d4b10af098d2b50740e83f73/packages/integration-test-app/windows/integrationtest/ReactPackageProvider.cpp#L15) when initialising it.
+
+See the next pages for some boilerplates on how to create a simple JSI module for each different platform.
+
+{/* So, to clarify: */}
+
+{/* - TurboModules don't have to extend a Spec; that's just a Codegen thing. */}
+{/* - They're not New Architecture-only. */}
+
+{/* I think the main distinction between them is that TurboModules are lazy-initialised, while NativeModules are not. */}
