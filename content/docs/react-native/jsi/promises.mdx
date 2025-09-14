@@ -4,4 +4,83 @@ description: Boilerplate for writing Promises in JSI
 icon: Split
 ---
 
-TODO
+# Introduction
+
+JSI doesn't have a first-class `Promise` API, so we have to make do. I like to use Marc Rousavy's [approach](https://github.com/mrousavy/react-native-multithreading/blob/master/cpp/RNMultithreadingInstaller.cpp#L102) of grabbing `Promise` off the global object, constructing a `new Promise(callback)`, where we pass our own `(resolve, reject) => {}` callback into it.
+
+# Example
+
+In this example, we create a JSI `HostObject` with an API `getSizeOfWebPage(url: string): Promise<number>`. It creates a `Promise` before calling an iOS API, `NSURLSessionDataTask`, to perform native work asynchronously. Once the native work completes, we need to use `jsCallInvoker` to safely interact with the JavaScript runtime again (namely, to resolve/reject the `Promise`).
+
+```cpp
+#import "MyHostObject.h"
+#import <Foundation/Foundation.h>
+#import <React/RCTBridge+Private.h>
+#import <ReactCommon/RCTTurboModule.h>
+
+MyHostObject::MyHostObject() {}
+
+MyHostObject::~MyHostObject() {
+  // Provide a destructor, even if empty, to avoid the following build-time
+  // error relating to virtual tables:
+  // Undefined symbol: typeinfo for MyHostObject
+  // Undefined symbol: vtable for MyHostObject
+}
+
+jsi::Value MyHostObject::get(jsi::Runtime &rt, const jsi::PropNameID &propName)
+{
+  RCTBridge *bridge = [RCTBridge currentBridge];
+  std::shared_ptr<facebook::react::CallInvoker> jsCallInvoker = bridge.jsCallInvoker;
+
+  std::string name = propName.utf8(rt);
+
+  if(name == "getSizeOfWebPage"){
+    return jsi::Function::createFromHostFunction(
+      rt,
+      jsi::PropNameID::forAscii(rt, name),
+      1,
+      [this, jsCallInvoker](jsi::Runtime &rt, const jsi::Value &thisValue, const jsi::Value *arguments, size_t) -> jsi::Value {
+        if(!arguments[0].isString()){
+          throw jsi::JSError(rt, "TypeError: expected to be called as getSizeOfWebPage(url: string)");
+        }
+        jsi::String arg0 = arguments[0].asString(rt);
+        NSString* urlString = [NSString stringWithUTF8String:arg0.utf8(rt).c_str()];
+        NSURL *url = [NSURL URLWithString:urlString];
+
+        auto getSizeOfWebPage = jsi::Function::createFromHostFunction(rt,
+                                                                         jsi::PropNameID::forAscii(rt, "getSizeOfWebPage"),
+                                                                         2,
+                                                                      [this, jsCallInvoker, &url](jsi::Runtime& rt, const jsi::Value& thisValue, const jsi::Value* arguments, size_t count) -> jsi::Value {
+          auto resolverValue = std::make_shared<jsi::Value>((arguments[0].asObject(rt)));
+          auto rejecterValue = std::make_shared<jsi::Value>((arguments[1].asObject(rt)));
+
+          // Here's the iOS API we call. Once we enter the completion handler,
+          // we can't safely access the JavaScript runtime anymore, so we need
+          // to use the jsCallInvoker before running any more JSI code.
+          NSURLSessionDataTask *task =
+              [[NSURLSession sharedSession] dataTaskWithURL:url
+                                          completionHandler:^(NSData *data,
+                                                              NSURLResponse *response,
+                                                              NSError *error) {
+                jsCallInvoker->invokeAsync([resolverValue, rejecterValue, &rt, data, error]() {
+                  if (error) {
+                    rejecterValue->asObject(rt).asFunction(rt).call(rt, jsi::JSError(rt, error.description.UTF8String).value());
+                  } else {
+                    resolverValue->asObject(rt).asFunction(rt).call(rt, jsi::Value((double)data.length));
+                  }
+                });
+              }];
+          [task resume];
+
+          return jsi::Value::undefined();
+        });
+
+        return rt.global().getPropertyAsFunction(rt, "Promise").callAsConstructor(rt, getSizeOfWebPage);
+      });
+  }
+
+  return jsi::Value::undefined();
+}
+```
+
+Now, I did hear that returning Promises from JSI may have [event loop blocking issues](https://github.com/facebook/react-native/issues/33006#issuecomment-1034983813). I've not personally run into them (perhaps out of sheer luck that my apps always have some other reason to drain their microtasks), but that linked discussion shows how to force the event loop to drain microtasks if you need to.
