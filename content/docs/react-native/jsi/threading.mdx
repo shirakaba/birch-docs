@@ -86,4 +86,179 @@ This becomes a lot more fiddly in JSI because we need to get access to the `UIDi
 
 # This time with JSI
 
+For now, I just have a Windows example, but the key concepts will be the same across all platforms. The main unknown will be figuring out how to get a reference to `uiInvoker` on each platform.
+
+## iOS (and macOS)
+
 TODO
+
+## Android
+
+TODO
+
+## Windows (UWP)
+
+Here is a C++/WinRT example for React Native Windows (UWP), which launches the [root folder](https://learn.microsoft.com/en-us/uwp/api/windows.storage.applicationdata.localfolder? view=winrt-26100#windows-storage-applicationdata-localfolder) of the local app data store. It shows how we can cross over to the UI thread with uiInvoker to run a native UI API, then cross back to the JS thread to resolve a `Promise`.
+
+### `MyHostObject.h`
+
+We'll make a `MyHostObject` with a `launchRootFolder(): Promise<void>` API on it. It relies on being passed a `jsInvoker` and `uiInvoker` at construction time (which we'll show how to do in `ReactNativeModule.h`).
+
+```cpp
+#pragma once
+
+#include <JSI/JsiApiContext.h>
+#include <ReactCommon/TurboModule.h>
+#include <ReactCommon/TurboModuleUtils.h>
+#include <Windows.h>
+#include <jsi/jsi.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.System.h>
+#include <string>
+#include "JSValue.h"
+#include "NativeModules.h"
+
+using namespace winrt::Microsoft::ReactNative;
+using namespace winrt::Windows::Storage;
+using namespace winrt::Windows::System;
+using namespace facebook;
+
+namespace winrt::MyModule
+{
+class MyHostObject : public jsi::HostObject
+{
+  public:
+    MyHostObject(
+      std::shared_ptr<react::CallInvoker> jsInvoker,
+      std::shared_ptr<react::CallInvoker> uiInvoker
+    )
+      : jsi::HostObject(),
+        m_jsInvoker(jsInvoker),
+        m_uiInvoker(uiInvoker)
+    {
+    }
+
+  private:
+    std::shared_ptr<react::CallInvoker> m_jsInvoker{nullptr};
+    std::shared_ptr<react::CallInvoker> m_uiInvoker{nullptr};
+
+  public:
+    jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &propName) override
+    {
+      std::string name = propName.utf8(rt);
+
+      if (name == "launchRootFolder")
+      {
+        return jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt, name),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisValue, const jsi::Value *arguments, size_t) -> jsi::Value
+          {
+            return rt.global()
+              .getPropertyAsFunction(rt, "Promise")
+              .callAsConstructor(
+                rt,
+                jsi::Function::createFromHostFunction(
+                  rt,
+                  jsi::PropNameID::forAscii(rt, "launchRootFolderPromise"),
+                  2,
+                  [this, options](
+                    jsi::Runtime &rt2, const jsi::Value &thisValue, const jsi::Value *arguments, size_t count) -> jsi::Value
+                  {
+                    auto resolverValue = std::make_shared<jsi::Value>((arguments[0].asObject(rt2)));
+                    auto rejecterValue = std::make_shared<jsi::Value>((arguments[1].asObject(rt2)));
+
+                    this->m_uiInvoker.get()->invokeAsync(
+                      [this, resolverValue, rejecterValue, &rt2]()
+                      {
+                        // https://learn.microsoft.com/en-us/uwp/api/windows.storage.applicationdata.localfolder?  view=winrt-26100#windows-storage-applicationdata-localfolder
+                        StorageFolder storageFolder = ApplicationData::Current().LocalFolder();
+
+                        // https://learn.microsoft.com/en-us/uwp/api/windows.system.launcher.launchfolderasync?view=winrt-26100
+                        Launcher::LaunchFolderAsync(storageFolder)
+                        .Completed(
+                          [this, resolverValue, rejecterValue, &rt2](
+                            IAsyncOperation<bool> const &operation,
+                            AsyncStatus const status
+                          )
+                          {
+                            this->m_jsInvoker.get()->invokeAsync(
+                              [this, operation, resolverValue, rejecterValue, &rt2]()
+                              {
+                                bool result = operation.GetResults();
+                                resolverValue->asObject(rt2).asFunction(rt2).call(rt2, jsi::Value(result));
+                              });
+                          });
+                      });
+
+                    return jsi::Value::undefined();
+                  }
+                )
+              );
+          });
+      }
+
+      return jsi::Value::undefined();
+    }
+};
+
+} // namespace winrt::MyModule
+```
+
+### `ReactNativeModule.h`
+
+In our `Initialize` method for the TurboModule, we install a `MyHostObject` instance onto the global object, passing our `jsInvoker` and `uiInvoker` to it.
+
+```cpp
+#pragma once
+
+#include <JSI/JsiAbiApi.h>
+#include <JSI/JsiApiContext.h>
+#include <ReactCommon/TurboModule.h>
+#include <TurboModuleProvider.h>
+#include <Windows.h>
+#include <jsi/jsi.h>
+#include <winrt/Microsoft.ReactNative.h>
+#include <winrt/Windows.Foundation.h>
+#include "MyHostObject.h"
+#include "JSValue.h"
+#include "NativeModules.h"
+
+using namespace winrt::Microsoft::ReactNative;
+using namespace facebook;
+
+namespace winrt::MyModule
+{
+
+REACT_MODULE(ReactNativeModule, L"MyModule")
+struct ReactNativeModule
+{
+  REACT_INIT(Initialize)
+  void Initialize(ReactContext const &reactContext) noexcept
+  {
+    ExecuteJsi(
+      reactContext,
+      [reactContext](jsi::Runtime &rt)
+      {
+        // From React Native Windows v0.74, it simplifies from
+        // `reactContext.JSDispatcher().Handle()` to just `reactContext`.
+        auto jsInvoker = winrt::Microsoft::ReactNative::MakeAbiCallInvoker(reactContext.JSDispatcher().Handle());
+        auto uiInvoker = winrt::Microsoft::ReactNative::MakeAbiCallInvoker(reactContext.UIDispatcher().Handle());
+
+        rt.global().setProperty(
+          rt,
+          "MyHostObject",
+          jsi::Object::createFromHostObject(rt, std::make_shared<MyHostObject>(jsInvoker, uiInvoker)));
+      });
+  }
+
+ public:
+  ~ReactNativeModule()
+  {
+  }
+};
+
+} // namespace winrt::MyModule
+```
