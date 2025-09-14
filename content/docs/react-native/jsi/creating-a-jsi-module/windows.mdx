@@ -76,16 +76,7 @@ This is the C++/WinRT **header** for the native module. We'll make just some sma
 ```diff
   #pragma once
 
-+ // TODO: Investigate which of these headers can be removed.
-+ #include <JSI/JsiAbiApi.h>
 + #include <JSI/JsiApiContext.h>
-+ #include <ReactCommon/TurboModule.h>
-+ #include <TurboModuleProvider.h>
-+ #include <Windows.h>
-+ #include <jsi/jsi.h>
-+ #include <winrt/Microsoft.ReactNative.h>
-+ #include <winrt/Windows.Foundation.h>
-+ #include "JSValue.h"
   #include "NativeModules.h"
 + #include "MyHostObject.h"
 
@@ -110,7 +101,7 @@ This is the C++/WinRT **header** for the native module. We'll make just some sma
 +       [reactContext](jsi::Runtime &rt)
 +       {
 +         // On New Architecture, grab the callInvoker like this instead:
-+         // auto callInvoker = ReactContext{context}.CallInvoker();
++         // auto callInvoker = ReactContext{reactContext}.CallInvoker();
 +         auto callInvoker = winrt::Microsoft::ReactNative::MakeAbiCallInvoker(reactContext.JSDispatcher().Handle());
 +
 +         rt.global().setProperty(
@@ -138,6 +129,7 @@ This is the C++/WinRT **implementation** for the `jsi::HostObject`. It implement
 ```cpp
 #pragma once
 
+// TODO: Investigate which of these headers can be removed.
 #include <JSI/JsiApiContext.h>
 #include <ReactCommon/TurboModule.h>
 #include <ReactCommon/TurboModuleUtils.h>
