@@ -9,14 +9,16 @@ icon: Grid2x2
 First, initialise a library for a native module as follows:
 
 ```sh
-# For Old Arch
-npx react-native init-windows --template old/uwp-cpp-lib --name MyModule
-
-# For New Arch
 npx react-native init-windows --template cpp-lib --name MyModule
 ```
 
-This boilerplate will carry on from that step. There's little difference between the Old Arch and New Arch templates as far as this boilerplate is concerned.
+<Callout type='info'>
+
+The `cpp-lib` template [explicitly supports](https://github.com/microsoft/react-native-windows/pull/14476) both Old Architecture and New Architecture.
+
+</Callout>
+
+This boilerplate will carry on from that step. By the end, we'll have a native module that installs a JSI `HostObject` onto the global object upon initialisation.
 
 # Making our JSI module
 
@@ -101,6 +103,8 @@ This is the C++/WinRT **header** for the native module. We'll make just some sma
 +       reactContext,
 +       [reactContext](jsi::Runtime &rt)
 +       {
++         // On New Architecture, grab the callInvoker like this instead:
++         // auto callInvoker = ReactContext{context}.CallInvoker();
 +         auto callInvoker = winrt::Microsoft::ReactNative::MakeAbiCallInvoker(reactContext.JSDispatcher().Handle());
 +
 +         rt.global().setProperty(
