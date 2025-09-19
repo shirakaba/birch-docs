@@ -10,7 +10,7 @@ index: true
 
 Xcode has built-in profiling tools described thoroughly in Antoine Van der Lee's [blog post](https://www.avanderlee.com/optimization/analysing-build-performance-xcode/). They give a linear profile like this:
 
-![Xcode linear profile](./build-profiling-xcode-built-in.jpg)
+![Xcode linear profile](./build-profiling-img/xcode-built-in.jpg)
 
 While these tools are fine for measuring the length of individual tasks, they're no good for visualising the build cascade (i.e. which build tasks are blocked on which other build tasks). To visualise that, I turn to community-made tools.
 
@@ -18,7 +18,7 @@ While these tools are fine for measuring the length of individual tasks, they're
 
 With [xcode-build-times](https://github.com/PaulTaykalo/xcode-build-times-rendering), which Maksym Shcheglov walks us through [how to use](https://www.onswiftwings.com/posts/build-time-optimization-part1/), we can make lovely build cascades like this:
 
-![Xcode cascade profile](./build-profiling-xcode-cascade.jpg)
+![Xcode cascade profile](./build-profiling-img/xcode-cascade.jpg)
 
 _(The above result is after a bit of CSS tweaking and manual annotation, as initially it looks cramped like [this](https://x.com/birch_js/status/1884505338801717746))_
 
@@ -28,13 +28,13 @@ _(The above result is after a bit of CSS tweaking and manual annotation, as init
 
 You can view the task time by category (e.g. external build system, Kotlin compilation, Java compilation, dexing) using [Gradle Build Analyzer](https://developer.android.com/build/build-analyzer):
 
-![Gradle Build Analyzer](./build-profiling-gradle-build-analyzer.png)
+![Gradle Build Analyzer](./build-profiling-img/gradle-build-analyzer.png)
 
 ## Module graph
 
 Using [gradle-dependency-graph-generator-plugin](https://github.com/vanniktech/gradle-dependency-graph-generator-plugin) (or the newer [module-graph](https://github.com/iurysza/module-graph), which I haven't tried out), you can visualise the dependency graph of all your project modules, which can inform build blockers (e.g. here, you can see that all the `expo-*` modules depend upon `expo-modules-core`).
 
-![Gradle dependency graph](./build-profiling-gradle-module-graph.png)
+![Gradle dependency graph](./build-profiling-img/gradle-module-graph.png)
 
 It makes for a nice Powerpoint slide, but if you want to understand build times as well, you'll need a cascade profile.
 
@@ -42,7 +42,7 @@ It makes for a nice Powerpoint slide, but if you want to understand build times 
 
 The best tool I've found is [Gradle Profiler](https://github.com/gradle/gradle-profiler). It has many features, but I particularly liked [Build Scan](https://gradle.com/develocity/product/build-scan/), which helps visualise the build waterfall. You can use it to create timelines like this (original archived [here](https://web.archive.org/web/20250916212448/https://scans.gradle.com/s/fzrvu4jy4phac/timeline)):
 
-![Gradle Build Scan](./build-profiling-gradle-build-scan.png)
+![Gradle Build Scan](./build-profiling-img/gradle-build-scan.png)
 
 (_Again, I've put some manual annotations on top, of course. All Gradle Profiler gives you is the timeline._)
 
