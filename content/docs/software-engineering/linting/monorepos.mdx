@@ -1,0 +1,224 @@
+---
+title: Monorepos
+icon: Boxes
+description: How to lint monorepos.
+---
+
+<Callout type='info'>
+
+This guide is written for ESLint – sorry if you're using Biome! That said, the concepts may still be applicable to Biome on some level.
+
+</Callout>
+
+# Making the monorepo itself
+
+Take a classic monorepo structure (with `./apps` and `./packages` workspaces to hold apps and libraries, respectively):
+
+```
+.
+├── apps
+│   └── my-app
+│       ├── index.html
+│       └── package.json
+├── package.json
+└── packages
+    └── my-lib
+        ├── index.js
+        └── package.json
+```
+
+# Setting up workspace-level linting
+
+## The root-level config
+
+Let's integrate eslint into the repo. We'll need a root-level eslint config and some workspace-level ones as well:
+
+```diff
+  .
+  ├── apps
+  │   └── my-app
++ │       ├── eslint.config.mjs
+  │       ├── index.html
+  │       └── package.json
++ ├── eslint.config.mjs
+  ├── package.json
+  └── packages
+      └── my-lib
++         ├── eslint.config.mjs
+          ├── index.js
+          └── package.json
+```
+
+I always like to start with typescript-eslint's [Getting Started](https://typescript-eslint.io/packages/typescript-eslint/#usage) boilerplate:
+
+```js
+// @ts-check
+import eslint from "@eslint/js";
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
+  eslint.configs.recommended,
+  tseslint.configs.recommended,
+);
+```
+
+## The workspace-level configs
+
+Let's add eslint at the workspace level, too:
+
+```diff
+  .
+  ├── apps
+  │   └── my-app
++ │       ├── eslint.config.mjs
+  │       ├── index.html
+  │       └── package.json
+  ├── eslint.config.mjs
+  ├── package.json
+  └── packages
+      └── my-lib
++         ├── eslint.config.mjs
+          ├── index.js
+          └── package.json
+```
+
+To extend from the base config (to be clear: you **don't have to**! It's just if you want to reuse conventions), you'd set up both of the configs like this:
+
+```js
+// @ts-check
+import tseslint from "typescript-eslint";
+import baseConfig from "../../eslint.config.mjs";
+
+export default tseslint.config(
+  ...baseConfig,
+
+  // Add extra config in here to override/extend the base config.
+);
+```
+
+## Excluding workspace-level files from root-level linting
+
+If you run `npx eslint` from the root at this point, it will lint not only the **root-level** files like `package.json` (which we do want), but also all the **workspace-level** files like `apps/my-lib/index.js` (which we don't want – it's more flexible to be able to lint those separately).
+
+What's worse, when running `npx eslint` from the root, workspace-level files will be linted using the root-level `eslint.config.mjs`, but those base rules may not be correct – we need them to be linted via the workspace-level configs.
+
+Don't take my word for it, though – to assess for yourself, run the linting command with debug logs enabled.
+
+```sh
+npx eslint --debug
+```
+
+Amongst the many logs, you'll see a record of which files were visited and which config file was used for each one:
+
+```
+  eslint:config-loader [Legacy]: Calculating config for /Users/me/my-monorepo/packages/my-lib/index.js +0ms
+  eslint:config-loader [Legacy]: Using config file /Users/me/my-monorepo/eslint.config.mjs and base path /Users/me/my-monorepo +0ms
+```
+
+## Ignoring workspaces from the root-level config
+
+So how can we lint just the files in the root, and exclude the workspace files? Simply add an `ignores` rule for each workspace into the root `eslint.config.mjs`:
+
+```diff
+  // @ts-check
+  import eslint from "@eslint/js";
+  import tseslint from "typescript-eslint";
+
+  export default tseslint.config(
+    eslint.configs.recommended,
+    tseslint.configs.recommended,
++   { ignores: ["apps", "packages"] },
+  );
+```
+
+## Unignoring ignored directories when extending the base config
+
+### How config-merging works with `ignores`
+
+Earlier, you saw that to create each workspace-level config, we extended the root-level config like so:
+
+```js
+// @ts-check
+import tseslint from "typescript-eslint";
+import baseConfig from "../../eslint.config.mjs";
+
+export default tseslint.config(
+  ...baseConfig,
+
+  // Add extra config in here to override/extend the base config.
+);
+```
+
+If you inlined `...baseConfig`, you'd see that the workspace-level configs are effectively equivalent to this:
+
+```js
+// @ts-check
+import eslint from "@eslint/js";
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
+  /* START baseConfig */
+  eslint.configs.recommended,
+  tseslint.configs.recommended,
+  { ignores: ["apps", "packages"] },
+  /* END baseConfig */
+
+  // Add extra config in here to override/extend the base config.
+);
+```
+
+This means that the workspace-level configs would also end up ignoring `apps` and `packages`. But suppose we _wanted_ to have directories of those names within our workspace, how would we unignore them?
+
+Intuitively, you might think we could override previous ignores like this:
+
+```diff
+  // @ts-check
+  import tseslint from "typescript-eslint";
+  import baseConfig from "../../eslint.config.mjs";
+
+  export default tseslint.config(
+    ...baseConfig,
+
++   { ignores: [] },
+  );
+```
+
+However, `ignores` is a special case. It only merges **additively**. That is to say, declaring `ignores` again allows you to add extra stuff into it, but you can never remove from it. So what can we do?
+
+### A workaround
+
+There's no need to subtract if we never add in the first place. We can change our configs as follows:
+
+#### The root-level config
+
+Give a name to the `ignores` rule so that we can filter on it:
+
+```diff
+  // @ts-check
+  import eslint from "@eslint/js";
+  import tseslint from "typescript-eslint";
+
+  export default tseslint.config(
+    eslint.configs.recommended,
+    tseslint.configs.recommended,
+-   { ignores: ["apps", "packages"] },
++   { name: "root-level ignores", ignores: ["apps", "packages"] },
+  );
+```
+
+#### The workspace-level configs
+
+Take all the rules from the base config except for the `ignores` rule.
+
+```diff
+  // @ts-check
+  import tseslint from "typescript-eslint";
+  import baseConfig from "../../eslint.config.mjs";
+
+  export default tseslint.config(
+-   ...baseConfig,
++   ...baseConfig.filter(({ name }) => name !== "root-level ignores"),
+  );
+```
+
+It's a bit inelegant, but it does the trick! Alternatively, you could export a `configWithoutIgnores` from the root-level `eslint.config.js` to be imported instead of importing the base config directly.
