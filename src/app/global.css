@@ -1,3 +1,11 @@
 @import "tailwindcss";
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
+
+html {
+  /*
+   * Stops layout thrashing on Safari at 1280px on pages that have overflow.
+   * https://github.com/fuma-nama/fumadocs/issues/2384#issuecomment-3316030594
+   */
+  scrollbar-gutter: stable;
+}
