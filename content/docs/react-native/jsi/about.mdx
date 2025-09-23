@@ -1,0 +1,36 @@
+---
+title: What is JSI?
+icon: Info
+---
+
+**JavaScript Interface (JSI)** is Facebook's engine-agnostic interface for calling native code from a JavaScript runtime. It is effectively the Foreign Function Interface (FFI) for React Native.
+
+Documentation for it is scarce. The main resource is the code comments in [`<jsi/jsi.h>`](https://github.com/facebook/hermes/blob/main/API/jsi/jsi/jsi.h). I myself mostly learned it by following Ammar Ahmed's [Getting Started guide](https://blog.notesnook.com/getting-started-react-native-jsi/) and by studying community libraries like Marc Rousavy's [`react-native-vision-camera`](https://github.com/mrousavy/react-native-vision-camera).
+
+# How does it integrate with React Native?
+
+<Callout type='warn'>
+
+The below description will soon go out of date, as Facebook are actively [rearchitecting things](https://github.com/facebook/react-native/blob/4fb42c84d8b841523d7e9f10ddc0e01c4ecf68b5/packages/react-native/ReactCommon/cxxreact/JSExecutor.h#L52-L53). But I expect that the main broad concepts will remain the same, even if the exact implementation changes a little.
+
+</Callout>
+
+The React Native runtime executes JSI functionality through a [`JSIExecutor`](https://github.com/facebook/react-native/blob/4fb42c84d8b841523d7e9f10ddc0e01c4ecf68b5/packages/react-native/ReactCommon/jsiexecutor/jsireact/JSIExecutor.h#L70-L72), and JavaScript functionality through its superclass, [`JSExecutor`](https://github.com/facebook/react-native/blob/4fb42c84d8b841523d7e9f10ddc0e01c4ecf68b5/packages/react-native/ReactCommon/cxxreact/JSExecutor.h#L26). The `JSIExecutor` is abstract, however, and so has to be implemented for each specific engine, e.g. [`HermesExecutor`](https://github.com/facebook/react-native/blob/7f57018e252a140e0311dd74dbd1ac442753d28e/packages/react-native/ReactCommon/hermes/executor/HermesExecutorFactory.h#L47) and [`JSCExecutor`](https://github.com/facebook/react-native/blob/7e2f17ffe229e09288deba9061221835300ec153/packages/react-native/ReactAndroid/src/main/java/com/facebook/react/jscexecutor/JSCExecutor.kt#L20-L21).
+
+<Callout type='info'>
+
+JSI has been implemented for many different engines, so you can see various different ways to integrate it:
+
+- **Hermes** (by [Meta](https://github.com/facebook/hermes/tree/main/API/jsi/jsi))
+- **JavaScriptCore** (originally by [Meta](https://github.com/facebook/react-native/commit/8174d028116f00b6e89968d368b719ec8b7f6ff6), but later moved to [community ownership](https://github.com/react-native-community/javascriptcore))
+- **V8** (independently by [Microsoft](https://github.com/microsoft/v8-jsi) and [Expo](https://github.com/Kudo/react-native-v8); see Kudo Chien's [talk](https://www.youtube.com/watch?v=6e0b2O6NRz4) on the latter)
+- **QuickJS** (by [Microsoft](https://github.com/tudorms/QuickJSI), for a hackathon)
+- **Chakra** (by [Microsoft](https://github.com/microsoft/react-native-windows/tree/261dda2ee168fd83c0c5960bfcd24777bdf5c2b8/vnext/Chakra), for use in React Native Windows, as Chakra is included with Windows)
+- **Duktape** (by [Semmy Purewal](https://github.com/semmypurewal/duktape-jsi))
+
+</Callout>
+
+Using Hermes as an example: At some point, React Native calls [`HermesExecutorFactory::createJSExecutor`](https://github.com/facebook/react-native/blob/7f57018e252a140e0311dd74dbd1ac442753d28e/packages/react-native/ReactCommon/hermes/executor/HermesExecutorFactory.cpp#L195) to make a `HermesExecutor`, which is basically just a subclass of `JSIExecutor` that [holds a reference to a `HermesRuntime`](https://github.com/facebook/react-native/blob/7f57018e252a140e0311dd74dbd1ac442753d28e/packages/react-native/ReactCommon/hermes/executor/HermesExecutorFactory.h#L55) and [returns that reference](https://github.com/facebook/react-native/blob/09a7e0a0fc850b536eafba3ad3f516c3c43543d7/packages/react-native/ReactCommon/hermes/executor/HermesExecutorFactory.cpp#L262) in its implementation of [`JSExecutor::getRuntimeTargetDelegate`](https://github.com/facebook/react-native/blob/09a7e0a0fc850b536eafba3ad3f516c3c43543d7/packages/react-native/ReactCommon/cxxreact/JSExecutor.h#L152).
+
+{/* I got mixed up here. While an ABI-stable Hermes is in the works, there's been no talk of an ABI-stable JSI (beyond Microsoft's one for React Native Windows). */}
+{/* For now, each React Native version builds against a specific version of JSI (and hence ships a [copy of it](https://github.com/facebook/react-native/blob/main/packages/react-native/ReactCommon/jsi/jsi/jsi.h)), but in the long term, it will move to an [ABI-stable API](https://github.com/facebook/hermes/tree/static_h/API/hermes_abi), removing this coupling. */}
