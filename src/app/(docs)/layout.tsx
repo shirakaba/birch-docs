@@ -15,7 +15,11 @@ export const metadata = createMetadata({
 
 export default function Layout({ children }: LayoutProps<"/">) {
   return (
-    <DocsLayout tree={source.pageTree} {...baseOptions()}>
+    <DocsLayout
+      tree={source.pageTree}
+      {...baseOptions()}
+      githubUrl="https://github.com/shirakaba/birch-docs"
+    >
       {children}
     </DocsLayout>
   );
