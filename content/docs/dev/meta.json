@@ -1,5 +1,6 @@
 {
   "root": true,
   "title": "Software Engineering",
-  "icon": "Building"
+  "icon": "Building",
+  "pages": ["---Introduction---", "index", "---Subtopics---", "..."]
 }

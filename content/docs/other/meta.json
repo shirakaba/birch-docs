@@ -1,5 +1,6 @@
 {
   "root": true,
   "title": "Other",
-  "icon": "TentTree"
+  "icon": "TentTree",
+  "pages": ["---Introduction---", "index", "---Subtopics---", "..."]
 }
