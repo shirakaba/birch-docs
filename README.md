@@ -8,9 +8,7 @@ Run development server:
 ```bash
 npm run dev
 # or
-pnpm dev
-# or
-yarn dev
+bun dev
 ```
 
 Open http://localhost:3000 with your browser to see the result.
@@ -22,11 +20,10 @@ In the project, you can see:
 - `lib/source.ts`: Code for content source adapter, [`loader()`](https://fumadocs.dev/docs/headless/source-api) provides the interface to access your content.
 - `lib/layout.shared.tsx`: Shared options for layouts, optional but preferred to keep.
 
-| Route                     | Description                                            |
-| ------------------------- | ------------------------------------------------------ |
-| `app/(home)`              | The route group for your landing page and other pages. |
-| `app/docs`                | The documentation layout and pages.                    |
-| `app/api/search/route.ts` | The Route Handler for search.                          |
+| Route                         | Description                         |
+| ----------------------------- | ----------------------------------- |
+| `src/app/(docs)`              | The documentation layout and pages. |
+| `src/app/api/search/route.ts` | The Route Handler for search.       |
 
 ### Fumadocs MDX
 
