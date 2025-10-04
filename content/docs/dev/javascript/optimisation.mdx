@@ -1,0 +1,108 @@
+---
+title: Optimisation
+description: Techniques to make your code perform better.
+icon: Gauge
+---
+
+I'll add extra sections to this page over time.
+
+# Prefer to assign constant class fields via the prototype
+
+## Problem
+
+Consider the following TypeScript source, where we try to implement [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) from the DOM spec:
+
+```ts
+class EventTarget {
+  readonly NONE = 0;
+  readonly CAPTURING_PHASE = 1;
+  readonly AT_TARGET = 2;
+  readonly BUBBLING_PHASE = 3;
+
+  constructor(/* TODO */) {}
+}
+```
+
+It transpiles to the following JavaScript:
+
+```js
+// ESNext
+class EventTarget {
+  constructor(/* TODO */) {
+    this.NONE = 0;
+    this.CAPTURING_PHASE = 1;
+    this.AT_TARGET = 2;
+    this.BUBBLING_PHASE = 3;
+  }
+}
+
+// ES5
+var EventTarget = /** @class */ (function () {
+  function EventTarget(/* TODO */) {
+    this.NONE = 0;
+    this.CAPTURING_PHASE = 1;
+    this.AT_TARGET = 2;
+    this.BUBBLING_PHASE = 3;
+  }
+  return EventTarget;
+})();
+```
+
+There's an inefficiency here. Every time you call `new EventTargte()`, it needs to assign several properties onto the class instance inside the constructor function. Let's see how we can make it faster.
+
+## Solution
+
+We can assign to the prototype itself instead. Here's the source:
+
+```ts
+class EventTarget {
+  declare NONE: 0;
+  declare CAPTURING_PHASE: 1;
+  declare AT_TARGET: 2;
+  declare BUBBLING_PHASE: 3;
+
+  static {
+    Object.defineProperties(this.prototype, {
+      NONE: { value: 0 },
+      CAPTURING_PHASE: { value: 1 },
+      AT_TARGET: { value: 2 },
+      BUBBLING_PHASE: { value: 3 },
+    });
+  }
+}
+```
+
+This transpiles to:
+
+```js
+// ESNext
+class EventTarget {
+  static {
+    Object.defineProperties(this.prototype, {
+      NONE: { value: 0 },
+      CAPTURING_PHASE: { value: 1 },
+      AT_TARGET: { value: 2 },
+      BUBBLING_PHASE: { value: 3 },
+    });
+  }
+}
+
+// ES5
+var EventTarget = /** @class */ (function () {
+  function EventTarget() {}
+  return EventTarget;
+})();
+_a = EventTarget;
+(function () {
+  Object.defineProperties(_a.prototype, {
+    NONE: { value: 0 },
+    CAPTURING_PHASE: { value: 1 },
+    AT_TARGET: { value: 2 },
+    BUBBLING_PHASE: { value: 3 },
+  });
+})();
+```
+
+I originally benchmarked this in 2022 on NativeScript V8, which had JIT disabled and may have transpiled classes, and found that it saved about 100 nanoseconds per construction of `new EventTarget()`.
+
+Now, however, I'm failing to reproduce those results in jsbench in Safari. Perhaps JIT makes this a non-problem, or JSC handles this discrepancy better, but I think the theory is still sound regardless. Put some breakpoints inside the constructor and see how many statements get run in the "before" approach vs. the "after" approach.
