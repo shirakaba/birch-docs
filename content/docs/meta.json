@@ -1,3 +1,10 @@
 {
-  "pages": ["---Introduction---", "index", "---Topics---", "dev", "other"]
+  "pages": [
+    "---Introduction---",
+    "index",
+    "---Topics---",
+    "dev",
+    "other",
+    "licences"
+  ]
 }
