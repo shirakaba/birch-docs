@@ -5,8 +5,109 @@ icon: Music
 
 {/* TODO: Could revive my pitch accent [graphs](https://jp-pitch-accent.vercel.app). */}
 
-Japanese is a tonal language, and mastering its tonality is key to pulling off an authentic accent. Unfortunately, the system is complex and resources for studying it are very limited.
+Japanese is a tonal language, and mastering its tonality is key to pulling off an authentic native-like accent. Unfortunately, the system is complex, and resources for studying it are very limited.
 
-In this article, I plan to share my own understanding based on studying Dogen's [phonetics course](https://www.patreon.com/cw/dogen), referring to the [NHK Pitch Accent dictionary](https://www.nhk.or.jp/bunken/accent/index.html) appendix and the primary data of the [Online Japanese Accent Dictionary](https://www.gavo.t.u-tokyo.ac.jp/ojad/kouzokugo), and reading academic reviews such as Kawahara's [The Phonology of Japanese Accent](https://doi.org/10.1515/9781614511984.445). I used all of these sources to develop a [CLI tool](https://github.com/shirakaba/pitch-accent) to work out pitch accent patterns for arbitrary words.
+In this article, I plan to share my own understanding based on studying Dogen's [phonetics course](https://www.patreon.com/cw/dogen), referring to the [NHK Pitch Accent dictionary](https://www.nhk.or.jp/bunken/accent/index.html) appendix and the primary data of the [Online Japanese Accent Dictionary](https://www.gavo.t.u-tokyo.ac.jp/ojad/kouzokugo), and reading academic reviews such as Kawahara's [The Phonology of Japanese Accent](https://doi.org/10.1515/9781614511984.445).
 
-🚧 Work in progress.
+<Callout type="warn">
+  This page is going to take some time and several rewrites before it's worth
+  reading, so consider it a scrappy work in progress for now. To see my full
+  mental model of pitch accent so far, see the [CLI
+  tool](https://github.com/shirakaba/pitch-accent) I created to work out pitch
+  accent patterns for arbitrary words, which applies all the above resources.
+</Callout>
+
+# Nouns
+
+## Non-compound nouns
+
+### … with three syllables
+
+Most likely, there will be an accent on the **first syllable**. However, there are some exceptions, particularly in words of native Japanese origin:
+
+<Callout type='info'>
+
+**Distributions of different accent patterns in trisyllabic words**
+
+| Accent pattern | Antepenultimate | Penultimate | Final | N     |
+| -------------- | --------------- | ----------- | ----- | ----- |
+| Native         | 59%             | 33%         | 9%    | 634   |
+| Sino-Japanese  | 95%             | 2%          | 3%    | 2,427 |
+| Loanwords      | 96%             | 2%          | 2%    | 722   |
+
+_Source: [The Phonology of Japanese Accent](https://doi.org/10.1515/9781614511984.445), section 3. Itself adapted from [Kubozono (2008: 170)](https://academic.oup.com/edited-volume/28236)._
+
+</Callout>
+
+### … that are loanwords with four morae
+
+Four-mora loanwords where the last two syllables are both **free of epenthetic vowels** and **light** are likely to be **unaccented**. To explain:
+
+- Take the last two syllables of the word.
+- Does either syllable include an epenthetic vowel?
+
+  ```js
+  const epentheticVowels = /[くすつぬむるずづぐクスツヌムルズヅグ]/g;
+
+  // Each of these words include an epenthetic vowel in their last two syllables:
+  // - "idol": ア・イ・ド・ル
+  // - "process": プ・ロ・セ・ス
+  epentheticVowels.test("ドル"); // true
+  epentheticVowels.test("セス"); // true
+
+  // Each of these words are free of epenthetic vowels in their last two syllables:
+  // - "America": ア・メ・リ・カ
+  // - "antenna": ア・ン・テ・ナ
+  epentheticVowels.test("リカ"); // false
+  epentheticVowels.test("テナ"); // false
+  ```
+
+  - **Yes**: The word will generally have an accent somewhere.
+  - **No**: Is either syllable "heavy"?
+
+    ```js
+    const isHeavy = (morae: string[]) => morae.length > 1;
+
+    // Each of these words include a heavy syllable in their last two syllables:
+    // - "Parade": パ・レー・ド：HL
+    // - "London": ロン・ドン：HH
+    [["レ", "ー"], ["ド"]].some(isHeavy); // true
+    [["ロ", "ン"], ["ド", "ン"]].some(isHeavy); // true
+
+    // Each of these words are free of heavy syllables in their last two syllables:
+    // - "America": ア・メ・リ・カ： LL
+    // - "antenna": ア・ン・テ・ナ： LL
+    [["リ"], ["カ"]].some(isHeavy); // false
+    [["テ"], ["ナ"]].some(isHeavy); // false
+    ```
+
+    - **Yes**: The word will generally have an accent somewhere.
+    - **No**: The word is likely to be unaccented! 🎉
+
+## Compound nouns
+
+### … formed from two nouns, N1 and N2
+
+#### … where N2 has one or two morae
+
+TODO: attack Kawahara's Section 4.1 with a strong coffee
+
+#### … where N2 has three to four morae
+
+If N2 is unaccented, or has accent on the final syllable, then the accent generally falls on the initial syllable of N2.
+
+- si'n+yokohama → sin+yo'kohama "Shin-Yokohama"
+
+_Source: [The Phonology of Japanese Accent](https://doi.org/10.1515/9781614511984.445), section 4.2:23_
+
+Otherwise, the accent of N2 is retained:
+
+- si'n+tamane'gi → sin+tamane'gi "new onion"
+
+_Source: [The Phonology of Japanese Accent](https://doi.org/10.1515/9781614511984.445), section 4.2:24_
+
+#### … where N2 has five or more morae
+
+The compound noun tends to retain the accent of the N2.
+
+_Source: [The Phonology of Japanese Accent](https://doi.org/10.1515/9781614511984.445), section 4.2:26._
