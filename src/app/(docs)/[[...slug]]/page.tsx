@@ -35,7 +35,7 @@ export default async function Page(props: PageProps<"/[[...slug]]">) {
             a: createRelativeLink(source, page),
 
             // https://github.com/fuma-nama/fumadocs/blob/65237fa2f095fe4b6840bb31490fe802bed89158/apps/docs/app/docs/%5B...slug%5D/page.tsx#L121
-            DocsCategory: ({ url, peerType = "page" }) => {
+            DocsCategory: ({ url, peerType = "any" }) => {
               return <DocsCategory url={url ?? page.url} peerType={peerType} />;
             },
           })}
@@ -58,7 +58,7 @@ function DocsCategory({
       ? getPageTreePeers(source.pageTree, url)
       : peerType === "folder"
         ? getPageTreeRoots(source.pageTree)
-        : source.pageTree.children;
+        : getPageTreePeersAnyType(source.pageTree, url);
 
   return (
     <Cards>
@@ -100,6 +100,45 @@ function DocsCategory({
     </Cards>
   );
 }
+
+function getPageTreePeersAnyType(tree: Root, url: string): Array<Node> {
+  const parent = findParentFromTree(tree, url);
+  if (!parent) return [];
+  return parent.children.filter((item): item is Node =>
+    item.type === "page" ? item.url !== url : true,
+  );
+}
+
+// https://github.com/fuma-nama/fumadocs/blob/5cb199fa37190a4861114e1ab3a19c1b22afa251/packages/core/src/page-tree/utils.ts#L82
+function findParentFromTree(
+  node: Root | Folder,
+  url: string,
+): Root | Folder | undefined {
+  if ("index" in node && node.index?.url === url) {
+    return node;
+  }
+  for (const child of node.children) {
+    if (child.type === "folder") {
+      const parent = findParentFromTree(child, url);
+      if (parent) return parent;
+    }
+    if (child.type === "page" && child.url === url) {
+      return node;
+    }
+  }
+  if ("fallback" in node && node.fallback) {
+    return findParentFromTree(node.fallback, url);
+  }
+}
+
+// Reproduce a bunch of types that fumadocs-core didn't export
+type Node = Parameters<typeof flattenTree>[0][number];
+type Item = ReturnType<typeof flattenTree>[number];
+type SeparatorOrFolder = Exclude<Node, Item>;
+type RootOrFolder = Parameters<typeof getPageTreeRoots>[0];
+type Separator = Exclude<Node, RootOrFolder | Item>;
+type Folder = Exclude<SeparatorOrFolder, Separator>;
+type Root = Exclude<RootOrFolder, Folder>;
 
 export async function generateStaticParams() {
   return source.generateParams();
