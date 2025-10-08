@@ -1,0 +1,24 @@
+---
+title: Codesigning
+# icon: House
+---
+
+My Xcodeproj was giving the following error when I attempted to build an app for release with manual codesigning:
+
+> Provisioning profile "type:dist-as appid:banana cert:apple-dist" doesn't include signing certificate "Apple Development: James Birch (TVQXF68BVV)".
+
+The problem was not that it lacked an eligible cert.
+
+The problem was that the cert it did contain was for iPhone Distribution, yet `CODE_SIGN_IDENTITY` had Xcode looking for one for "Apple Development".
+
+```diff
+- CODE_SIGN_IDENTITY = "Apple Development";
++ CODE_SIGN_IDENTITY = "iPhone Distribution";
+```
+
+```diff
+- CODE_SIGN_IDENTITY = "Apple Development";
++ "CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+```
+
+I am unclear whether an app signed for "iPhone Distribution" can run on your own personal device, or whether – like with Mac App Distribution – it is only suitable for shipping to the App Store. Need to verify.
