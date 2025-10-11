@@ -9,3 +9,9 @@ html {
    */
   scrollbar-gutter: stable;
 }
+
+/* Override a strange rule that was setting <h1> to have margin-top: 0 */
+.prose :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
+  margin-block-start: 2em;
+  /* margin-block-start: 0.83em; */
+}
