@@ -1,0 +1,150 @@
+---
+title: Codesigning
+description: Codesigning a Windows app
+icon: Signature
+---
+
+The following guide assumes a React Native Windows UWP app named "Banana", managed as a Visual Studio project, that we want to package as MSIX and codesign. However, these steps are broadly applicable to any Windows codesigning, including unpackaged single-file Win32 executables.
+
+# Signing for sideloading with a local certificate
+
+Using Visual Studio, right-click your project＊ and create an App Package using the [packaging wizard](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#create-an-app-package-using-the-packaging-wizard) (i.e. `Publish > Create App Packages...`).
+
+<Callout type='info'>
+
+＊ If you're working on a [Windows Application Packaging](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-packaging-dot-net#set-up-the-windows-application-packaging-project-in-your-solution) (WAP) project rather than a [single-project MSIX](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/single-project-msix?tabs=csharp), then you may have two projects: `banana` and `banana.Package`. If so, it's `banana.Package` you want!
+
+</Callout>
+
+From here, the wizard offers to let you select the signing method. Simply select your certificate from disk, complete the wizard, and you're done!
+
+# Signing for Azure Trusted Signing
+
+But what if you want to use Azure [Trusted Signing](https://learn.microsoft.com/en-us/azure/trusted-signing/overview)? In this case, you have no physical certificate to reference, because Azure manages it.
+
+## Creating an unsigned app package
+
+This time, let's create an unsigned App Package. As above, right-click your project in Visual Studio and select `Publish > Create App Packages...` to begin the packaging wizard. Next, specify "Don't code sign", as we'll be signing as a follow-up step in a moment. And for this example, we'll choose "Bundle: never" (which creates a `.msix` for one architecture), but the following instructions can easily be adapted for "Bundle: always" (which creates a `.msixbundle` for multiple architectures).
+
+So after completing the wizard, you'll have a file tree that looks like this:
+
+```
+.
+├── index.html
+├── Banana.Package_1.2.3.0_x64_Test
+│   ├── Add-AppDevPackage.ps1
+│   ├── Add-AppDevPackage.resources
+│   ├── Dependencies
+│   ├── Install.ps1
+│   ├── TelemetryDependencies
+│   ├── Banana.Package_1.2.3.0_x64.appxsym
+│   └── Banana.Package_1.2.3.0_x64.msix
+└── Banana.Package_x64.appinstaller
+```
+
+Out of those, [what we need to sign](https://learn.microsoft.com/en-us/windows/msix/package/persistent-identity) is the `Banana.Package_1.2.3.0_x64.msix`.
+
+## Signing the MSIX
+
+### Via CLI
+
+To begin, we need to set up Trusted Signing, which I can't explain any better than this 9-step [guide](https://melatonin.dev/blog/code-signing-on-windows-with-azure-trusted-signing/). By following this guide, you'll end up creating a `CodeSigningAccountName` and `CertificateProfileName`, which you need to copy into a `code-signing.json` file. We'll be passing this file as an argument to the signing command, so it makes sense to place `code-signing.json` somewhere inside your project's code repository. As it's not secret information, you can commit it to version control.
+
+```json
+{
+  "Endpoint": "https://wus2.codesigning.azure.net",
+  "CodeSigningAccountName": "banana-codesigning-acc",
+  "CertificateProfileName": "banana-codesigning-cert-profile"
+}
+```
+
+Next, Install Windows SDK 10.0.2261.755+, which is needed to get a `signtool.exe` that's [new enough](https://learn.microsoft.com/en-us/azure/trusted-signing/how-to-signing-integrations#set-up-signtool-to-use-trusted-signing) to support Trusted Signing.
+
+<Callout type='info'>
+
+Personally, I installed Windows SDK 10.0.26100.0 via the `Visual Studio Installer` app, which meant I had a copy of `signtool.exe` at `C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe`.
+
+</Callout>
+
+After that, open `Developer Command Prompt for VS 2022` (the name may vary based on the version of Visual Studio you have). This behaves like `cmd.exe`, but has all the necessary environment for signing set. In this command prompt, set the Azure Trusted Signing details you configured during the 9-step guide, reference the `signtool.exe` we just installed, and finally sign your MSIX!
+
+```sh
+SET AZURE_TENANT_ID=********-****-****-****-************
+SET AZURE_CLIENT_ID=********-****-****-****-************
+SET AZURE_CLIENT_SECRET=****************************************
+"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe" sign /v /debug /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib "%UserProfile%\.nuget\packages\microsoft.trusted.signing.client\1.0.60\bin\x64\Azure.CodeSigning.Dlib.dll" /dmdf "..\code-signing.json" "Banana.Package_1.2.3.0_x64_Test\Banana.Package_1.2.3.0_x64.msix"
+```
+
+If you wish to verify the codesigning (handy if you've forgotten whether you signed something yet), the command is:
+
+```sh
+"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe" verify /v /pa "Banana.Package_1.2.3.0_x64_Test\Banana.Package_1.2.3.0_x64.msix"
+```
+
+### Via GitHub Actions
+
+The [`windows-latest`](https://github.com/actions/runner-images?tab=readme-ov-file#available-images) runner is, at the time of writing, based on Windows Server 2025, which [comes with](https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md) Windows SDK 10.0.26100.0. As mentioned earlier, this version comes with a suitable `signtool.exe`.
+
+With GitHub Actions, we needn't stoop to writing our own CLI command. We can use the fancy [azure/trusted-signing-action](https://github.com/Azure/trusted-signing-action) to abstract the process. It allows us to ditch our `code-signing.json` file and reference our `AZURE_` environment variables directly as secrets, and gives us a handy API for filtering which files/folders to sign.
+
+```yml
+name: Release React Native Windows WAP project
+
+on:
+  workflow_dispatch:
+
+# Based on: https://microsoft.github.io/react-native-windows/docs/setup-ci
+jobs:
+  build:
+    name: Main job
+    runs-on: windows-latest
+
+    steps:
+      # https://github.com/actions/checkout
+      - name: 🚪 Check out repository
+        uses: actions/checkout@v4
+
+      # ... Set up pnpm, node, install npm dependencies, etc. ...
+
+      # https://github.com/microsoft/setup-msbuild
+      - name: 🏗️ Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # https://microsoft.github.io/react-native-windows/docs/run-windows-cli
+      - name: 👷 Build Windows x64
+        working-directory: apps/banana
+        shell: bash
+        run: npx react-native run-windows --arch x64 --release --logging --no-deploy
+
+      # https://github.com/Azure/trusted-signing-action
+      - name: ✍️ Sign files with Trusted Signing
+        uses: azure/trusted-signing-action@v0.5.9
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://wus2.codesigning.azure.net
+          trusted-signing-account-name: banana-codesigning-acc
+          certificate-profile-name: banana-codesigning-cert-profile
+          files-folder: ${{ github.workspace }}\apps\banana\windows\Banana.Package\AppPackages
+          files-folder-filter: msix
+          files-folder-recurse: true
+          # If you're codesigning an app that doesn't use MSIX packaging (e.g.
+          # an Electron app, which is just an .exe), you might change the above
+          # to:
+          # files-folder-filter: exe
+          # files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      # https://github.com/actions/upload-artifact
+      - name: 🚀 Upload the artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: banana-windows-latest
+          path: |
+            ${{ github.workspace }}/apps/banana/windows/banana.Package/AppPackages/*
+```
+
+On a successful run of that GitHub Action, you can check the finished workflow and see the attached artifact, which will contain the whole app package.
