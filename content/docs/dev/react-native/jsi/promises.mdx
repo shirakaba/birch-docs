@@ -4,11 +4,11 @@ description: Boilerplate for writing Promises in JSI
 icon: Split
 ---
 
-# Introduction
+## Introduction
 
 JSI doesn't have a first-class `Promise` API, so we have to make do. I like to use Marc Rousavy's [approach](https://github.com/mrousavy/react-native-multithreading/blob/master/cpp/RNMultithreadingInstaller.cpp#L102) of grabbing `Promise` off the global object, constructing a `new Promise(callback)`, where we pass our own `(resolve, reject) => {}` callback into it.
 
-# Example
+## Example
 
 In this example, we create a JSI `HostObject` with an API `getSizeOfWebPage(url: string): Promise<number>`. It creates a `Promise` before calling an iOS API, `NSURLSessionDataTask`, to perform native work asynchronously. Once the native work completes, we need to use `jsCallInvoker` to safely interact with the JavaScript runtime again (namely, to resolve/reject the `Promise`).
 

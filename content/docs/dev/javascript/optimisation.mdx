@@ -6,9 +6,9 @@ icon: Gauge
 
 I'll add extra sections to this page over time.
 
-# Prefer to assign constant class fields via the prototype
+## Prefer to assign constant class fields via the prototype
 
-## Problem
+### Problem
 
 Consider the following TypeScript source, where we try to implement [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) from the DOM spec:
 
@@ -50,7 +50,7 @@ var EventTarget = /** @class */ (function () {
 
 There's an inefficiency here. Every time you call `new EventTargte()`, it needs to assign several properties onto the class instance inside the constructor function. Let's see how we can make it faster.
 
-## Solution
+### Solution
 
 We can assign to the prototype itself instead. Here's the source:
 

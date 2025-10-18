@@ -4,7 +4,7 @@ description: Creating a simple JSI module for Windows.
 icon: Grid2x2
 ---
 
-# Initialising the library
+## Initialising the library
 
 First, initialise a library for a native module as follows:
 
@@ -20,11 +20,11 @@ The `cpp-lib` template [explicitly supports](https://github.com/microsoft/react-
 
 This boilerplate will carry on from that step. By the end, we'll have a TurboModule that installs a JSI `HostObject` onto the global object upon initialisation.
 
-# Making our JSI module
+## Making our JSI module
 
-## ① The native module
+### ① The native module
 
-### `MyModule.ts`
+#### `MyModule.ts`
 
 This file provides the TypeScript interface, and an installation command, for the native module.
 
@@ -59,7 +59,7 @@ interface MyModule extends TurboModule {
 }
 ```
 
-### `ReactPackageProvider.{h,cpp}`
+#### `ReactPackageProvider.{h,cpp}`
 
 These two C++ files implement the native module's package provider. We'll take the default [`ReactPackagerProvider.h`](https://github.com/microsoft/react-native-windows/blob/d1f46f7a19b38d8ea60fcb697dae154849ec7520/vnext/templates/cpp-lib/windows/MyLib/ReactPackageProvider.h) and [`ReactPackagerProvider.cpp`](https://github.com/microsoft/react-native-windows/blob/d1f46f7a19b38d8ea60fcb697dae154849ec7520/vnext/templates/cpp-lib/windows/MyLib/ReactPackageProvider.cpp) files created by `react-native init-windows`; no need to change them.
 
@@ -69,7 +69,7 @@ By default, this native module is set up to be a `TurboModule`, as [`ReactPackag
 
 </Callout>
 
-### `ReactNativeModule.h`
+#### `ReactNativeModule.h`
 
 This is the C++/WinRT **header** for the native module. We'll make just some small additions to the default [`ReactNativeModule.h`](https://github.com/microsoft/react-native-windows/blob/d1f46f7a19b38d8ea60fcb697dae154849ec7520/vnext/templates/cpp-lib/windows/MyLib/MyLib.h) file created by `react-native init-windows`. Upon initialisation, we'll make our native module set up an instance of `MyHostObject` on the global.
 
@@ -120,9 +120,9 @@ This is the C++/WinRT **header** for the native module. We'll make just some sma
   } // namespace winrt::MyModule
 ```
 
-## ② The JSI Host Object
+### ② The JSI Host Object
 
-### `MyHostObject.h`
+#### `MyHostObject.h`
 
 This is the C++/WinRT **implementation** for the `jsi::HostObject`. It implements a `makeUUID()` function.
 

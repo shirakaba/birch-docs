@@ -10,7 +10,7 @@ This guide is written for ESLint.
 
 </Callout>
 
-# Making the monorepo itself
+## Making the monorepo itself
 
 Take a classic monorepo structure (with `./apps` and `./packages` workspaces to hold apps and libraries, respectively):
 
@@ -27,9 +27,9 @@ Take a classic monorepo structure (with `./apps` and `./packages` workspaces to 
         └── package.json
 ```
 
-# Setting up workspace-level linting
+## Setting up workspace-level linting
 
-## The root-level config
+### The root-level config
 
 Let's integrate eslint into the repo. We'll need a root-level eslint config and some workspace-level ones as well:
 
@@ -62,7 +62,7 @@ export default tseslint.config(
 );
 ```
 
-## The workspace-level configs
+### The workspace-level configs
 
 Let's add eslint at the workspace level, too:
 
@@ -96,7 +96,7 @@ export default tseslint.config(
 );
 ```
 
-## Excluding workspace-level files from root-level linting
+### Excluding workspace-level files from root-level linting
 
 If you run `npx eslint` from the root at this point, it will lint not only the **root-level** files like `package.json` (which we do want), but also all the **workspace-level** files like `apps/my-lib/index.js` (which we don't want – it's more flexible to be able to lint those separately).
 
@@ -115,7 +115,7 @@ Amongst the many logs, you'll see a record of which files were visited and which
   eslint:config-loader [Legacy]: Using config file /Users/me/my-monorepo/eslint.config.mjs and base path /Users/me/my-monorepo +0ms
 ```
 
-## Ignoring workspaces from the root-level config
+### Ignoring workspaces from the root-level config
 
 So how can we lint just the files in the root, and exclude the workspace files? Simply add an `ignores` rule for each workspace into the root `eslint.config.mjs`:
 
@@ -131,9 +131,9 @@ So how can we lint just the files in the root, and exclude the workspace files? 
   );
 ```
 
-## Unignoring ignored directories when extending the base config
+### Unignoring ignored directories when extending the base config
 
-### How config-merging works with `ignores`
+#### How config-merging works with `ignores`
 
 Earlier, you saw that to create each workspace-level config, we extended the root-level config like so:
 
@@ -185,11 +185,11 @@ Intuitively, you might think we could override previous ignores like this:
 
 However, `ignores` is a special case. It only merges **additively**. That is to say, declaring `ignores` again allows you to add extra stuff into it, but you can never remove from it. So what can we do?
 
-### A workaround
+#### A workaround
 
 There's no need to subtract if we never add in the first place. We can change our configs as follows:
 
-#### The root-level config
+##### The root-level config
 
 Give a name to the `ignores` rule so that we can filter on it:
 
@@ -206,7 +206,7 @@ Give a name to the `ignores` rule so that we can filter on it:
   );
 ```
 
-#### The workspace-level configs
+##### The workspace-level configs
 
 Take all the rules from the base config except for the `ignores` rule.
 

@@ -5,9 +5,9 @@ icon: Signature
 
 Codesigning in the Apple ecosystem involves Identifiers, Certificates, and Profiles, which can be managed on the Apple Developer site [here](https://developer.apple.com/account/resources/identifiers/list).
 
-# Terminology
+## Terminology
 
-## Identifiers
+### Identifiers
 
 Identifiers identify **what is being signed**, most commonly an **app**.
 
@@ -71,7 +71,7 @@ Though it's not just apps; they may identify anything from the list below.
 
 </details>
 
-## Certificates
+### Certificates
 
 Certificates represent **a signing authority** (e.g. yourself, your team, or your CI system).
 
@@ -159,7 +159,7 @@ Each certificate type covers a certain responsibility scope; see all in the list
 
 </details>
 
-## Profiles
+### Profiles
 
 Profiles detail the **contexts** an app is allowed to run in (e.g. which devices and distribution channels), and the **privileges** (e.g. Push Notifications) that it is entitled to.
 
@@ -174,6 +174,6 @@ Whenever an Apple app is launched, the embedded provisioning profile is consulte
 
 {/* For example, if the provisioning profile in a codesigned Mac app references a certificate for Mac App Distribution, it can be submitted to the Mac App Store, but not launched on a Mac. */}
 
-# How codesigning works
+## How codesigning works
 
 TODO: Explain how [@electron/osx-sign](https://github.com/electron/osx-sign) works, disambiguate development vs. distribution signing and application vs. installer signing, and contrast Mac App Store distribution with 3rd Party distribution.

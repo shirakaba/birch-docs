@@ -4,7 +4,7 @@ description: Crossing threads in JSI
 icon: Spool
 ---
 
-# A non-JSI example to illustrate
+## A non-JSI example to illustrate
 
 Threading _could_ be easy, it's just that JSI has no first-class APIs for it. Here I show an Old Architecture React Native Windows native module that demonstrates how easy thread-crossing can be with some decent primitives. Here, it's easy because we have easy access to `UIDispatcher` and have `onSuccess` and `onFailure` handlers passed to us.
 
@@ -84,25 +84,25 @@ public:
 
 This becomes a lot more fiddly in JSI because we need to get access to the `UIDispatcher` ourselves, not to mention managing a `Promise`. But let's not be discouraged!
 
-# This time with JSI
+## This time with JSI
 
 For now, I just have a Windows example, but the key concepts will be the same across all platforms. The main unknown will be figuring out how to get a reference to `uiInvoker` on each platform.
 
-## Apple platforms
+### Apple platforms
 
 TODO
 
-## Android
+### Android
 
 TODO
 
-## Windows
+### Windows
 
 Here is a C++/WinRT example for React Native Windows (Old Arch), which launches the [root folder](https://learn.microsoft.com/en-us/uwp/api/windows.storage.applicationdata.localfolder?view=winrt-26100#windows-storage-applicationdata-localfolder) of the local app data store. It shows how we can cross over to the UI thread with `uiInvoker` to run a native UI API, then cross back to the JS thread to resolve a `Promise`.
 
 While this code example was written for Old Arch, it should be almost identical on New Arch. The main differece is that, in `ReactNativeModule.h`, the API for grabbing the `jsInvoker` and `uiInvoker` will have changed slightly.
 
-### `MyHostObject.h`
+#### `MyHostObject.h`
 
 We'll make a `MyHostObject` with a `launchRootFolder(): Promise<void>` method on it. It relies on being passed a `jsInvoker` and `uiInvoker` at construction time (which we'll show how to do in `ReactNativeModule.h`).
 
@@ -209,7 +209,7 @@ class MyHostObject : public jsi::HostObject
 } // namespace winrt::MyModule
 ```
 
-### `ReactNativeModule.h`
+#### `ReactNativeModule.h`
 
 In our `Initialize` method for the TurboModule, we install a `MyHostObject` instance onto the global object, passing our `jsInvoker` and `uiInvoker` to it.
 

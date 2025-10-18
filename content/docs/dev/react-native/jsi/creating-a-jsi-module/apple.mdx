@@ -4,9 +4,9 @@ description: Creating a simple JSI module for Apple platforms.
 icon: Apple
 ---
 
-# ① The native module
+## ① The native module
 
-## `MyModule.ts`
+### `MyModule.ts`
 
 This file provides the TypeScript interface, and an installation command, for the native module.
 
@@ -41,7 +41,7 @@ interface MyModule extends TurboModule {
 }
 ```
 
-## `MyModule.h`
+### `MyModule.h`
 
 This is the Objective-C++ **header** for the native module.
 
@@ -54,7 +54,7 @@ This is the Objective-C++ **header** for the native module.
 
 Remember to add this to your Xcode project!
 
-## `MyModule.mm`
+### `MyModule.mm`
 
 This is the Objective-C++ **implementation** for the native module.
 
@@ -107,9 +107,9 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(install) {
 
 Remember to add this to your Xcode project!
 
-# ② The JSI Host Object
+## ② The JSI Host Object
 
-## `MyHostObject.h`
+### `MyHostObject.h`
 
 This is the Objective-C++ **header** for the `jsi::HostObject`.
 
@@ -128,7 +128,7 @@ class JSI_EXPORT MyHostObject : public jsi::HostObject {
 
 Remember to add this to your Xcode project!
 
-## `MyHostObject.mm`
+### `MyHostObject.mm`
 
 This is the Objective-C++ **implementation** for the `jsi::HostObject`. It implements a `makeUUID()` function.
 

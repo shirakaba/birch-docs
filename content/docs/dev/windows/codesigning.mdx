@@ -6,7 +6,7 @@ icon: Signature
 
 The following guide assumes a React Native Windows UWP app named "Banana", managed as a Visual Studio project, that we want to package as MSIX and codesign. However, these steps are broadly applicable to any Windows codesigning, including unpackaged single-file Win32 executables.
 
-# Signing for sideloading with a local certificate
+## Signing for sideloading with a local certificate
 
 Using Visual Studio, right-click your project＊ and create an App Package using the [packaging wizard](https://learn.microsoft.com/en-us/windows/msix/package/packaging-uwp-apps#create-an-app-package-using-the-packaging-wizard) (i.e. `Publish > Create App Packages...`).
 
@@ -18,11 +18,11 @@ Using Visual Studio, right-click your project＊ and create an App Package using
 
 From here, the wizard offers to let you select the signing method. Simply select your certificate from disk, complete the wizard, and you're done!
 
-# Signing for Azure Trusted Signing
+## Signing for Azure Trusted Signing
 
 But what if you want to use Azure [Trusted Signing](https://learn.microsoft.com/en-us/azure/trusted-signing/overview)? In this case, you have no physical certificate to reference, because Azure manages it.
 
-## Creating an unsigned app package
+### Creating an unsigned app package
 
 This time, let's create an unsigned App Package. As above, right-click your project in Visual Studio and select `Publish > Create App Packages...` to begin the packaging wizard. Next, specify "Don't code sign", as we'll be signing as a follow-up step in a moment. And for this example, we'll choose "Bundle: never" (which creates a `.msix` for one architecture), but the following instructions can easily be adapted for "Bundle: always" (which creates a `.msixbundle` for multiple architectures).
 
@@ -44,9 +44,9 @@ So after completing the wizard, you'll have a file tree that looks like this:
 
 Out of those, [what we need to sign](https://learn.microsoft.com/en-us/windows/msix/package/persistent-identity) is the `Banana.Package_1.2.3.0_x64.msix`.
 
-## Signing the MSIX
+### Signing the MSIX
 
-### Via CLI
+#### Via CLI
 
 To begin, we need to set up Trusted Signing, which I can't explain any better than this 9-step [guide](https://melatonin.dev/blog/code-signing-on-windows-with-azure-trusted-signing/). By following this guide, you'll end up creating a `CodeSigningAccountName` and `CertificateProfileName`, which you need to copy into a `code-signing.json` file. We'll be passing this file as an argument to the signing command, so it makes sense to place `code-signing.json` somewhere inside your project's code repository. As it's not secret information, you can commit it to version control.
 
@@ -81,7 +81,7 @@ If you wish to verify the codesigning (handy if you've forgotten whether you sig
 "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe" verify /v /pa "Banana.Package_1.2.3.0_x64_Test\Banana.Package_1.2.3.0_x64.msix"
 ```
 
-### Via GitHub Actions
+#### Via GitHub Actions
 
 The [`windows-latest`](https://github.com/actions/runner-images?tab=readme-ov-file#available-images) runner is, at the time of writing, based on Windows Server 2025, which [comes with](https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md) Windows SDK 10.0.26100.0. As mentioned earlier, this version comes with a suitable `signtool.exe`.
 

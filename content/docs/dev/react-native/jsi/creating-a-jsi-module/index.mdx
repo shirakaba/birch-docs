@@ -5,7 +5,7 @@ icon: Blocks
 index: true
 ---
 
-# About JSI modules
+## About JSI modules
 
 JSI, TurboModules, Codegen, and New Architecture are often talked about in the same breath as if they're all part of the same thing, but in actuality, they're not. You can create JSI-based TurboModules without Codegen, and they can run on Old Architecture, at that.
 
@@ -13,7 +13,7 @@ I've never got on well with the official guides for [creating a TurboModule](htt
 
 I prefer to build my JSI modules from zero. No CLI tool, no Codegen, no unknowns. It only takes a few files.
 
-## What do you mean by "JSI module"?
+### What do you mean by "JSI module"?
 
 I'm avoiding saying "TurboModule" because in Old Architecture, native modules seem to be registered into both `NativeModules` and `TurboModuleRegistry`. In other words, **both** of these calls return a module:
 
