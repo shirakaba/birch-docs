@@ -1,0 +1,30 @@
+---
+title: Debugging
+icon: BugPlay
+---
+
+## Via the VS Code UI
+
+Despite hours of trying, I have never, _ever_ managed to get this working through any means. So sadly, it's CLI all the way, in my eyes.
+
+## Via the CLI
+
+Add `gem 'debug'` to your `Gemfile` and run `bundle install`.
+
+Now, you can run Ruby scripts through the [Ruby Debugger](https://github.com/ruby/debug) (`rdbg`) as follows:
+
+```sh
+# To debug `FOO=BAR bundle exec fastlane release`:
+FOO=BAR bundle exec rdbg -c -- bundle exec fastlane release
+```
+
+Useful commands:
+
+- `n` / `next`: Next line.
+- `c` / `continue`: Continue.
+- `bt`: Backtrace.
+- `i` / `info`: Info.
+- `h` / `help`: Help.
+- `p my_variable`: Evaluate the expression `my_variable`.
+
+The Ruby Debugger will automatically stop at `debugger` / `binding.break` / `binding.b` statements. In practice, I find it easiest to navigate just by inserting those into the code and playing through with `continue`.
