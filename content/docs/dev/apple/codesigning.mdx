@@ -176,4 +176,42 @@ Whenever an Apple app is launched, the embedded provisioning profile is consulte
 
 ## How codesigning works
 
-TODO: Explain how [@electron/osx-sign](https://github.com/electron/osx-sign) works, disambiguate development vs. distribution signing and application vs. installer signing, and contrast Mac App Store distribution with 3rd Party distribution.
+TODO: Explain how [@electron/osx-sign](https://github.com/electron/osx-sign) and [@electron/notarize](https://github.com/electron/notarize) work, disambiguate development vs. distribution signing and application vs. installer signing, and contrast Mac App Store distribution with 3rd Party distribution.
+
+- You need one certificate, of each type as needed, per Apple developer team (not business team, and certainly not per app). There's a limit to the number of Distribution certificates you can issue, so it is best to reuse them.
+- It's provisioning profiles that are per identifier.
+- `Apple Distribution` is a more modern type of certificate, introduced in Xcode 11 onwards, that is suitable for signing both iOS apps for the App Store, and macOS apps for the Mac App Store. However, it cannot sign Mac Installers for the Mac App Store.
+- `3rd Party Mac Installer Distribution` is the only certificate suitable for signing Mac Installers for the Mac App Store.
+- There's also `Apple Development` for local development.
+- An iOS app signed with ad hoc signing can only be run on whatever devices were included in the provisioning profile.
+- A macOS app signed with ad hoc signing can actually be run on any device, you just need to make sure it is downloaded via CLI rather than through a web browser. As downloading through a web browser sets the quarantine bit, causing Gatekeeper to block it from being opened, even if you right-click open it.
+- You can view all certs in (I think) a keychain with:
+
+  ```sh
+  security find-certificate -a -c
+  # To filter on birchlabs
+  security find-certificate -a -c -Z "birchlabs"
+  ```
+
+- You can view all identities with:
+
+  ```sh
+  security find-identity -v
+  ```
+
+- You can download and install the provisioning profiles, via:
+
+  ```sh
+  fastlane sigh download_all -o "$PROFILES_DIR" --platform ios --api_key "{ \"filepath\": \"$KEY_FILEPATH\", \"key_id\": \"$KEY_ID\", \"issuer_id\": \"$ISSUER_ID\" }"
+  ```
+
+  ... however, it's not enough to sign with them. To sign, you need to have also downloaded and installed the certificates contained within the provisioning profiles. Not only that, but the private keys of the certificates.
+
+| Common Name                         | developer.apple.com        |
+| ----------------------------------- | -------------------------- |
+| Apple Development                   | Development                |
+| Apple Distribution                  | Distribution               |
+| 3rd Party Mac Developer Application | Mac App Distribution       |
+| 3rd Party Mac Developer Installer   | Mac Installer Distribution |
+| Developer ID Application            | Developer ID Application   |
+| Developer ID Installer              | Developer ID Installer     |
