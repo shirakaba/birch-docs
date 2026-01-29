@@ -1,0 +1,190 @@
+---
+title: Metro
+icon: Box
+---
+
+## Which folders should I add to `watchFolders`?
+
+Given the following monorepo setup:
+
+```
+.
+├── apps
+│   ├── react-native-app
+│   │   ├── metro.config.js      * The subject of this section!
+│   │   └── package.json
+│   └── unrelated-web-app
+│       └── package.json
+├── packages
+│   ├── react-native-lib-a
+│   │   └── package.json
+│   ├── react-native-lib-b
+│   │   ├── example
+│   │   │   ├── metro.config.js
+│   │   │   └── package.json
+│   │   └── package.json
+│   └── unrelated-web-lib
+│       └── package.json
+├── scripts
+│   └── package.json
+└── package.json
+```
+
+… here's how I configure my `apps/react-native-app/metro.config.js`:
+
+```js
+// Based on:
+// - https://github.com/microsoft/rnx-kit/tree/main/packages/metro-config#expo
+// - https://docs.sentry.io/platforms/react-native/manual-setup/expo/#add-sentry-metro-plugin
+//
+// With reference to:
+// - https://metrobundler.dev/docs/configuration/
+
+const { makeMetroConfig } = require("@rnx-kit/metro-config");
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
+const path = require("node:path");
+
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getSentryExpoConfig(__dirname);
+
+const monorepoRoot = path.resolve(__dirname, "../..");
+
+// rnx-kit populates watchFolders from all the workspaces in the monorepo, plus
+// the root-level node_modules.
+config.watchFolders = config.watchFolders.filter((watchFolder) => {
+  const relativePath = path.relative(monorepoRoot, watchFolder);
+
+  switch (relativePath) {
+    case "apps/unrelated-web-app":
+    case "packages/unrelated-web-lib":
+    case "packages/react-native-lib-b/example":
+    case "scripts":
+      // None of the above workspaces are imported into the Metro bundle, so we
+      // exclude them from being watched for hot updates.
+      return false;
+    default:
+      // The remaining folders *are* imported into the Metro bundle, so should
+      // be watched for hot updates.
+      return true;
+  }
+});
+
+module.exports = makeMetroConfig(config);
+```
+
+## You should disable Watchman
+
+If you're tired of seeing "Recrawled this watch N times" warnings, Evan Bacon has some [good news](https://x.com/Baconbrix/status/1936969066217959687?s=20) for you:
+
+> Uninstall watchman, not really needed anymore as of SDK 53 and the new lazy crawling in Metro. Watchman is still faster but the warnings and jank aren't worth it right now.
+
+```js
+config.resolver.useWatchman = false;
+```
+
+## Dealing with conflicting dependencies
+
+Here's a real-world case I've had to deal with:
+
+```
+.
+├── apps
+│   └── react-native-app
+│       ├── metro.config.js
+│       └── package.json         # dependencies:
+│                                # - react@catalog:
+│                                # - react-native@catalog:
+│                                # - react-native-lib-a@workspace:*
+│                                # - react-native-lib-b@workspace:*
+│
+├── packages
+│   ├── react-native-lib-a
+│   │   └── package.json         # peerDependencies:
+│   │                            # - react@*
+│   │                            # - react-native@*
+│   │
+│   └── react-native-lib-b
+│       ├── example
+│       │   ├── metro.config.js  * The subject of this section!
+│       │   └── package.json     # dependencies:
+│       │                        # - react@catalog:
+│       │                        # - react-native@catalog:
+│       │
+│       └── package.json         # peerDependencies:
+│                                # - react@*
+│                                # - react-native@*
+│
+└── package.json
+```
+
+In such a monorepo, it's possible you may end up with multiple conflicting copies of dependencies, despite best efforts. Here's the Metro config I came up with for `packages/react-native-lib-b/example/metro.config.js`:
+
+```js
+const { getDefaultConfig } = require("expo/metro-config");
+const path = require("node:path");
+const { existsSync } = require("node:fs");
+
+const exampleWorkspace = path.resolve(__dirname, ".");
+const reactNativeLibB = path.resolve(__dirname, "..");
+const monorepoRoot = path.resolve(__dirname, "../../..");
+const reactNativeLibA = path.resolve(
+  monorepoRoot,
+  "packages",
+  "react-native-lib-a",
+);
+
+const config = getDefaultConfig(__dirname);
+
+// npm v7+ will install ../node_modules/react and ../node_modules/react-native
+// because of the peerDependencies declared in react-native-lib-b.
+//
+// To prevent the incompatible react-native between ./node_modules/react-native
+// and ../node_modules/react-native, we add blocklist the ones from the parent
+// folder.
+config.resolver.blockList = [
+  ...Array.from(config.resolver.blockList ?? []),
+  new RegExp(path.resolve(reactNativeLibB, "node_modules", "react")),
+  new RegExp(path.resolve(reactNativeLibB, "node_modules", "react-native")),
+];
+
+// Metro options docs:
+// - https://metrobundler.dev/docs/configuration/
+// - https://microsoft.github.io/react-native-windows/docs/0.66/metro-config-out-tree-platforms
+
+const allNodeModules = [
+  path.resolve(exampleWorkspace, "node_modules"),
+  path.resolve(reactNativeLibB, "node_modules"),
+  path.resolve(monorepoRoot, "node_modules"),
+];
+
+// Metro was initially designed for Haste module resolution, not Node module
+// resolution, so you need to tell it explicitly which node_modules to climb up.
+config.resolver.nodeModulesPaths = allNodeModules;
+
+// Any symlinked node modules (e.g. those referenced by "workspace:*") need to
+// be set up as well, because Metro doesn't implicitly follow symlinks.
+config.resolver.extraNodeModules = {
+  "react-native-lib-a": reactNativeLibA,
+  "react-native-lib-b": reactNativeLibB,
+};
+
+// Make any hoisted node_modules and symlinked packages visible to Metro.
+config.watchFolders = [
+  // Metro fails to bundle if we specify a missing path. It's hard to be sure
+  // which node_modules are going to exist (as it depends on what's currently
+  // installed and how our package manager is configured), so let's just filter
+  // by existing.
+  ...allNodeModules.filter((filePath) => existsSync(filePath)),
+  reactNativeLibA,
+  reactNativeLibB,
+];
+
+config.transformer.getTransformOptions = async () => ({
+  transform: {
+    experimentalImportSupport: false,
+    inlineRequires: true,
+  },
+});
+
+module.exports = config;
+```
