@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 
@@ -9,6 +10,13 @@ export async function GET(
   _req: Request,
   context: { params: Promise<{ slug: string[] }> },
 ) {
+  const logoPath = new URL(
+    "../../../public/favicon-greyscale.png",
+    import.meta.url,
+  );
+  const logoBuffer = await readFile(logoPath);
+  const logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+
   const { slug } = await context.params;
   const page = source.getPage(slug.slice(0, -1));
   if (!page) notFound();
@@ -29,7 +37,11 @@ export async function GET(
   }
   lines.push(page.data.title);
 
-  const textGreys = ["#6b6b6b", "#4f4f4f", "#1e1e1e"];
+  const textWhites = [
+    "rgba(255, 255, 255, 0.7)",
+    "rgba(255, 255, 255, 0.85)",
+    "rgba(255, 255, 255, 1)",
+  ];
 
   return new ImageResponse(
     <div
@@ -37,29 +49,43 @@ export async function GET(
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
+        position: "relative",
         width: "100%",
         height: "100%",
         padding: "80px 120px",
-        backgroundColor: "#DBD8DC",
+        backgroundColor: "#4D4D4D",
         fontFamily:
           "'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
+      <img
+        src={logoSrc}
+        width={630}
+        height={630}
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          opacity: 1,
+        }}
+      />
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          padding: "10px 24px",
+          padding: "12px 28px",
           borderRadius: 9999,
-          backgroundColor: "#453D47",
-          color: "#DBD8DC",
+          backgroundColor: "#FFFFFF",
+          color: "#2B2530",
           fontSize: 32,
-          fontWeight: 600,
-          marginBottom: 24,
+          fontWeight: 700,
+          marginBottom: 32,
           alignSelf: "flex-start",
+          border: "1px solid rgba(43, 37, 48, 0.08)",
+          boxShadow: "0 10px 24px rgba(36, 32, 40, 0.18)",
         }}
       >
-        {brandLabel}
+        <span style={{ letterSpacing: "-0.02em" }}>{brandLabel}</span>
       </div>
       {lines.map((text, index) => {
         // index 0: parent (if present), index 1: leaf
@@ -67,7 +93,7 @@ export async function GET(
         const fontSize = 40 + depthIndex * 14;
         const fontWeight = 500 + depthIndex * 150;
         const lineColor =
-          textGreys[Math.min(depthIndex, textGreys.length - 1)];
+          textWhites[Math.min(depthIndex, textWhites.length - 1)];
 
         return (
           <div
