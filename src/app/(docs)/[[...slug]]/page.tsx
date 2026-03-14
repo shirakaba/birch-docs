@@ -14,7 +14,7 @@ import {
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { source } from "@/lib/source";
+import { getPageImage, source } from "@/lib/source";
 import { getMDXComponents } from "@/mdx-components";
 
 export default async function Page(props: PageProps<"/[[...slug]]">) {
@@ -155,8 +155,22 @@ export async function generateMetadata(
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const description =
+    page.data.description ?? "Documentation from Birchdocs";
+  const image = {
+    url: getPageImage(page).url,
+    width: 1200,
+    height: 630,
+  };
+
   return {
     title: page.data.title,
-    description: page.data.description,
+    description,
+    openGraph: {
+      title: page.data.title,
+      description,
+      url: page.url,
+      images: [image],
+    },
   };
 }

@@ -1,4 +1,4 @@
-import { loader } from "fumadocs-core/source";
+import { type InferPageType, loader } from "fumadocs-core/source";
 import { icons } from "lucide-react";
 import { createElement } from "react";
 
@@ -21,3 +21,12 @@ export const source = loader({
     return createElement(icons[icon as keyof typeof icons]);
   },
 });
+
+/** OG image URL and path segments for a page (used by next/og route and metadata). */
+export function getPageImage(page: InferPageType<typeof source>) {
+  const segments = [...page.slugs, "image.png"];
+  return {
+    segments,
+    url: `/og/${segments.join("/")}`,
+  };
+}
