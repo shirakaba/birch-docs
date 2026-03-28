@@ -1,6 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { notFound } from "next/navigation";
+// import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
+import { type CSSProperties } from "react";
+
+import BirchTree from "../../../public/logo-crude-svg-sharp.svg";
 
 import { getPageImage, source } from "@/lib/source";
 
@@ -8,34 +10,34 @@ export const revalidate = false;
 
 export async function GET(
   _req: Request,
-  context: { params: Promise<{ slug: string[] }> },
+  context: { params: Promise<{ slug: Array<string> }> },
 ) {
-  const logoPath = new URL(
-    "../../../public/favicon-greyscale.png",
-    import.meta.url,
-  );
-  const logoBuffer = await readFile(logoPath);
-  const logoSrc = `data:image/png;base64,${logoBuffer.toString("base64")}`;
-
   const { slug } = await context.params;
-  const page = source.getPage(slug.slice(0, -1));
-  if (!page) notFound();
+  // const page = source.getPage(slug.slice(0, -1));
+  // if (!page) notFound(); // From next/navigation
 
-  const brandLabel = "Birchlabs";
+  const brandLabel = "Birchdocs";
 
-  let parentTitle: string | undefined;
-  if (page.slugs.length > 1) {
-    const parent = source.getPage(page.slugs.slice(0, -1));
-    parentTitle = parent?.data.title;
+  const height = 630;
+
+  // TODO: If lines is empty, fall back to slug.join("/")
+  const lines = new Array<string>();
+
+  console.log({ slug });
+  // console.log(source);
+
+  // Start from i === 1, because i === 0 is always just "Home".
+  for (let i = 1; i < slug.length; i++) {
+    const subslug = slug.slice(0, i + 1);
+    const page = source.getPage(subslug);
+    console.log(`${i}:`, subslug, page?.data.title);
+    if (!page) {
+      // Force a fallback to slug.
+      lines.splice(0);
+      break;
+    }
+    lines.push(page.data.title);
   }
-
-  const hasMoreParents = page.slugs.length > 2;
-
-  const lines: string[] = [];
-  if (parentTitle) {
-    lines.push(hasMoreParents ? `… / ${parentTitle}` : parentTitle);
-  }
-  lines.push(page.data.title);
 
   const textWhites = [
     "rgba(255, 255, 255, 0.7)",
@@ -48,78 +50,111 @@ export async function GET(
       style={{
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
+        alignItems: "flex-start",
+        justifyContent: "flex-start",
         position: "relative",
         width: "100%",
         height: "100%",
-        padding: "80px 120px",
+        padding: "40px",
         backgroundColor: "#4D4D4D",
         fontFamily:
           "'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
-      <img
-        src={logoSrc}
-        width={630}
-        height={630}
+      <BirchTree
+        width={height}
+        height={height}
         style={{
           position: "absolute",
           top: 0,
           right: 0,
+          bottom: 0,
           opacity: 1,
         }}
       />
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
           padding: "12px 28px",
           borderRadius: 9999,
-          backgroundColor: "#FFFFFF",
-          color: "#2B2530",
+          backgroundColor: "#EAE9EB",
+          color: "#5B535F",
+          // color: "#EAE9EB",
           fontSize: 32,
           fontWeight: 700,
-          marginBottom: 32,
-          alignSelf: "flex-start",
-          border: "1px solid rgba(43, 37, 48, 0.08)",
-          boxShadow: "0 10px 24px rgba(36, 32, 40, 0.18)",
         }}
       >
-        <span style={{ letterSpacing: "-0.02em" }}>{brandLabel}</span>
+        {brandLabel}
       </div>
       {lines.map((text, index) => {
-        // index 0: parent (if present), index 1: leaf
-        const depthIndex = index + 1; // deeper than brand
-        const fontSize = 40 + depthIndex * 14;
-        const fontWeight = 500 + depthIndex * 150;
+        const depthIndex = index + 1;
         const lineColor =
           textWhites[Math.min(depthIndex, textWhites.length - 1)];
 
         return (
           <div
-            key={`${index}-${text}`}
+            key={index}
             style={{
               display: "flex",
+              justifyContent: "flex-start",
               alignItems: "center",
-              marginLeft: `${depthIndex * 48}px`,
-              marginBottom: index === lines.length - 1 ? 0 : 16,
-              whiteSpace: "nowrap",
+              // marginLeft: `${depthIndex * 2}em`,
+              whiteSpace: "pre",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              fontSize,
-              fontWeight,
+              fontSize: 32,
+              fontWeight: 500,
+              fontFamily: "serif",
               color: lineColor,
+              // textShadow: "0px 0px 20px black",
             }}
           >
-            <span>{text}</span>
+            {lines.slice(0, index).map((line, i) => {
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    opacity: 0,
+                  }}
+                >
+                  <Branch style={{ color: lineColor }} />{" "}
+                  <div style={{ fontSize: 16 }}>{`${line.slice(0, 1)}`}</div>
+                </div>
+              );
+            })}
+
+            <Branch />
+            {` ${text}`}
           </div>
         );
       })}
     </div>,
     {
       width: 1200,
-      height: 630,
+      height,
     },
+  );
+}
+
+function Branch({ style = {} }: { style?: CSSProperties }) {
+  const { color = "white" } = style;
+
+  return (
+    <div
+      style={{
+        borderWidth: "1px",
+        borderStyle: "solid",
+        borderBottomColor: color,
+        borderLeftColor: color,
+        borderTopColor: "transparent",
+        borderRightColor: "transparent",
+        width: "1.5em",
+        height: "0.5em",
+        marginTop: "-0.5em",
+        ...style,
+      }}
+    ></div>
   );
 }
 
