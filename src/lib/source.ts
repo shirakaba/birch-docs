@@ -1,5 +1,6 @@
+import { SiAndroid, SiApple, SiGradle, SiJavascript, SiMetro, SiReact, SiRuby } from "@icons-pack/react-simple-icons";
 import { type InferPageType, loader } from "fumadocs-core/source";
-import { icons } from "lucide-react";
+import { icons as lucideIcons } from "lucide-react";
 import { createElement } from "react";
 
 import { docs } from "@/.source";
@@ -13,12 +14,19 @@ export const source = loader({
   // This is for setting icons in the sidebar, based off the `icon` frontmatter
   // in pages and meta files.
   // https://fumadocs.dev/docs/headless/source-api#icons
-  icon(icon) {
-    if (!icon || !(icon in icons)) {
+  icon(name) {
+    if(!name){
       return null;
     }
 
-    return createElement(icons[icon as keyof typeof icons]);
+    if(name in lucideIcons){
+      return createElement(lucideIcons[name as keyof typeof lucideIcons]);
+    }
+    if(name in iconsPack){
+      return createElement(iconsPack[name as keyof typeof iconsPack]);
+    }
+
+    return null;
   },
 });
 
@@ -30,3 +38,14 @@ export function getPageImage(page: InferPageType<typeof source>) {
     url: `/og/${segments.join("/")}`,
   };
 }
+
+// Expand this case-by-case to avoid bundling the whole library
+const iconsPack = {
+  SiApple,
+  SiAndroid,
+  SiGradle,
+  SiJavascript,
+  SiMetro,
+  SiReact,
+  SiRuby,
+};
