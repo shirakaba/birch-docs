@@ -19,6 +19,7 @@ export async function GET(
   const brandLabel = "Birchdocs";
 
   const height = 630;
+  const minTextOpacity = 0.33;
 
   // TODO: If lines is empty, fall back to slug.join("/")
   const lines = new Array<string>();
@@ -38,12 +39,6 @@ export async function GET(
     }
     lines.push(page.data.title);
   }
-
-  const textWhites = [
-    "rgba(255, 255, 255, 0.7)",
-    "rgba(255, 255, 255, 0.85)",
-    "rgba(255, 255, 255, 1)",
-  ];
 
   return new ImageResponse(
     <div
@@ -75,6 +70,7 @@ export async function GET(
       <div
         style={{
           padding: "12px 28px",
+          marginBottom: "24px",
           borderRadius: 9999,
           backgroundColor: "#EAE9EB",
           color: "#5B535F",
@@ -85,50 +81,80 @@ export async function GET(
       >
         {brandLabel}
       </div>
-      {lines.map((text, index) => {
-        const depthIndex = index + 1;
-        const lineColor =
-          textWhites[Math.min(depthIndex, textWhites.length - 1)];
 
-        return (
-          <div
-            key={index}
-            style={{
-              display: "flex",
-              justifyContent: "flex-start",
-              alignItems: "center",
-              // marginLeft: `${depthIndex * 2}em`,
-              whiteSpace: "pre",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              fontSize: 32,
-              fontWeight: 500,
-              fontFamily: "serif",
-              color: lineColor,
-              // textShadow: "0px 0px 20px black",
-            }}
-          >
-            {lines.slice(0, index).map((line, i) => {
-              return (
-                <div
-                  key={i}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          justifyContent: "flex-start",
+          paddingLeft: "24px",
+          rowGap: "12px",
+        }}
+      >
+        {lines.map((text, i, acc) => {
+          const branchStyle: CSSProperties = {
+            marginRight: "0.33em",
+          };
+
+          console.log(
+            `[${i}] "${text}": ${`rgba(255,255,255,${i + 1 / acc.length})`} (given acc.length ${acc.length})`,
+          );
+
+          return (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                justifyContent: "flex-start",
+                alignItems: "center",
+                whiteSpace: "pre",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                fontSize: 32,
+                // @vercel/og only bundles Noto Sans 400, so this has no effect
+                fontWeight: i === acc.length - 1 ? 500 : 300,
+
+                color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity)})`,
+              }}
+            >
+              {/* These are purely spacers */}
+              {lines.slice(0, i).map((line, j) => {
+                return (
+                  <div
+                    key={j}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      opacity: 0,
+                    }}
+                  >
+                    {j > 0 && (
+                      <Branch
+                        style={{
+                          ...branchStyle,
+                          color: `rgba(255,255,255,${minTextOpacity + ((j + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
+                        }}
+                      />
+                    )}
+                    <div style={{ fontSize: 16 }}>{`${line.slice(0, 1)}`}</div>
+                  </div>
+                );
+              })}
+
+              {i > 0 && (
+                <Branch
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    opacity: 0,
+                    ...branchStyle,
+                    color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
                   }}
-                >
-                  <Branch style={{ color: lineColor }} />{" "}
-                  <div style={{ fontSize: 16 }}>{`${line.slice(0, 1)}`}</div>
-                </div>
-              );
-            })}
-
-            <Branch />
-            {` ${text}`}
-          </div>
-        );
-      })}
+                />
+              )}
+              {text}
+            </div>
+          );
+        })}
+      </div>
     </div>,
     {
       width: 1200,
@@ -138,7 +164,7 @@ export async function GET(
 }
 
 function Branch({ style = {} }: { style?: CSSProperties }) {
-  const { color = "white" } = style;
+  const { height = "2em", color = "white" } = style;
 
   return (
     <div
@@ -150,8 +176,8 @@ function Branch({ style = {} }: { style?: CSSProperties }) {
         borderTopColor: "transparent",
         borderRightColor: "transparent",
         width: "1.5em",
-        height: "0.5em",
-        marginTop: "-0.5em",
+        height,
+        marginTop: `-${height}`,
         ...style,
       }}
     ></div>
