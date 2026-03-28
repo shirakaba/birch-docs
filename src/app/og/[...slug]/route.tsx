@@ -1,4 +1,3 @@
-// import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 import { type CSSProperties } from "react";
 
@@ -13,17 +12,14 @@ export async function GET(
   context: { params: Promise<{ slug: Array<string> }> },
 ) {
   const { slug } = await context.params;
-  // const page = source.getPage(slug.slice(0, -1));
-  // if (!page) notFound(); // From next/navigation
 
   const height = 630;
   const minTextOpacity = 0.33;
 
-  // TODO: If lines is empty, fall back to slug.join("/")
+  // TODO: handle the case of having too many lines to display (more than 4~5?)
   const lines = new Array<string>();
 
   console.log({ slug });
-  // console.log(source);
 
   // Start from i === 1, because i === 0 is always just "Home".
   for (let i = 1; i < slug.length; i++) {
@@ -67,6 +63,7 @@ export async function GET(
       />
       <BirchdocsBadge />
 
+      {/* Align the hierarchy to the vertical center of the remaining space */}
       <div
         style={{
           display: "flex",
@@ -75,86 +72,92 @@ export async function GET(
           alignItems: "center",
           justifyContent: "center",
 
-          // row-gap seems bugged
+          // row-gap seems bugged along with `justifyContent: "space-between"`
           marginTop: "24px",
           marginBottom: "24px",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            justifyContent: "flex-start",
-            paddingLeft: "24px",
-            rowGap: "12px",
-          }}
-        >
-          {lines.map((text, i, acc) => {
-            const branchStyle: CSSProperties = {
-              marginRight: "0.33em",
-            };
+        {lines.length ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              justifyContent: "flex-start",
+              paddingLeft: "24px",
+              rowGap: "12px",
+            }}
+          >
+            {lines.map((text, i, acc) => {
+              const branchStyle: CSSProperties = {
+                marginRight: "0.33em",
+              };
 
-            console.log(
-              `[${i}] "${text}": ${`rgba(255,255,255,${i + 1 / acc.length})`} (given acc.length ${acc.length})`,
-            );
+              console.log(
+                `[${i}] "${text}": ${`rgba(255,255,255,${i + 1 / acc.length})`} (given acc.length ${acc.length})`,
+              );
 
-            return (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-start",
-                  alignItems: "center",
-                  whiteSpace: "pre",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  fontSize: 32,
-                  // @vercel/og only bundles Noto Sans 400, so this has no effect
-                  fontWeight: i === acc.length - 1 ? 500 : 300,
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-start",
+                    alignItems: "center",
+                    whiteSpace: "pre",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    fontSize: 32,
+                    // @vercel/og only bundles Noto Sans 400, so this has no effect
+                    fontWeight: i === acc.length - 1 ? 500 : 300,
 
-                  color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity)})`,
-                }}
-              >
-                {/* These are purely spacers */}
-                {lines.slice(0, i).map((line, j) => {
-                  return (
-                    <div
-                      key={j}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        opacity: 0,
-                      }}
-                    >
-                      {j > 0 && (
-                        <Branch
-                          style={{
-                            ...branchStyle,
-                            color: `rgba(255,255,255,${minTextOpacity + ((j + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
-                          }}
-                        />
-                      )}
+                    color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity)})`,
+                  }}
+                >
+                  {/* These are purely spacers */}
+                  {lines.slice(0, i).map((line, j) => {
+                    return (
                       <div
-                        style={{ fontSize: 16 }}
-                      >{`${line.slice(0, 1)}`}</div>
-                    </div>
-                  );
-                })}
+                        key={j}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          opacity: 0,
+                        }}
+                      >
+                        {j > 0 && (
+                          <Branch
+                            style={{
+                              ...branchStyle,
+                              color: `rgba(255,255,255,${minTextOpacity + ((j + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
+                            }}
+                          />
+                        )}
+                        <div
+                          style={{ fontSize: 16 }}
+                        >{`${line.slice(0, 1)}`}</div>
+                      </div>
+                    );
+                  })}
 
-                {i > 0 && (
-                  <Branch
-                    style={{
-                      ...branchStyle,
-                      color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
-                    }}
-                  />
-                )}
-                {text}
-              </div>
-            );
-          })}
-        </div>
+                  {i > 0 && (
+                    <Branch
+                      style={{
+                        ...branchStyle,
+                        color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
+                      }}
+                    />
+                  )}
+                  {text}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ paddingLeft: "24px", fontSize: 52, color: "white" }}>
+            {"Jamie's personal docs site"}
+          </div>
+        )}
       </div>
 
       {/* Achieve symmetrical layout against the other BirchdocsBadge */}
