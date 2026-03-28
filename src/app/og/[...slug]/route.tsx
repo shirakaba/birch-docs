@@ -16,8 +16,6 @@ export async function GET(
   // const page = source.getPage(slug.slice(0, -1));
   // if (!page) notFound(); // From next/navigation
 
-  const brandLabel = "Birchdocs";
-
   const height = 630;
   const minTextOpacity = 0.33;
 
@@ -46,7 +44,7 @@ export async function GET(
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start",
-        justifyContent: "flex-start",
+        justifyContent: "space-between",
         position: "relative",
         width: "100%",
         height: "100%",
@@ -67,99 +65,125 @@ export async function GET(
           opacity: 1,
         }}
       />
-      <div
-        style={{
-          padding: "12px 28px",
-          marginBottom: "24px",
-          borderRadius: 9999,
-          backgroundColor: "#EAE9EB",
-          color: "#5B535F",
-          // color: "#EAE9EB",
-          fontSize: 32,
-          fontWeight: 700,
-        }}
-      >
-        {brandLabel}
-      </div>
+      <BirchdocsBadge />
 
       <div
         style={{
           display: "flex",
+          flex: 1,
           flexDirection: "column",
-          alignItems: "flex-start",
-          justifyContent: "flex-start",
-          paddingLeft: "24px",
-          rowGap: "12px",
+          alignItems: "center",
+          justifyContent: "center",
+
+          // row-gap seems bugged
+          marginTop: "24px",
+          marginBottom: "24px",
         }}
       >
-        {lines.map((text, i, acc) => {
-          const branchStyle: CSSProperties = {
-            marginRight: "0.33em",
-          };
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            justifyContent: "flex-start",
+            paddingLeft: "24px",
+            rowGap: "12px",
+          }}
+        >
+          {lines.map((text, i, acc) => {
+            const branchStyle: CSSProperties = {
+              marginRight: "0.33em",
+            };
 
-          console.log(
-            `[${i}] "${text}": ${`rgba(255,255,255,${i + 1 / acc.length})`} (given acc.length ${acc.length})`,
-          );
+            console.log(
+              `[${i}] "${text}": ${`rgba(255,255,255,${i + 1 / acc.length})`} (given acc.length ${acc.length})`,
+            );
 
-          return (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                justifyContent: "flex-start",
-                alignItems: "center",
-                whiteSpace: "pre",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                fontSize: 32,
-                // @vercel/og only bundles Noto Sans 400, so this has no effect
-                fontWeight: i === acc.length - 1 ? 500 : 300,
+            return (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  whiteSpace: "pre",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  fontSize: 32,
+                  // @vercel/og only bundles Noto Sans 400, so this has no effect
+                  fontWeight: i === acc.length - 1 ? 500 : 300,
 
-                color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity)})`,
-              }}
-            >
-              {/* These are purely spacers */}
-              {lines.slice(0, i).map((line, j) => {
-                return (
-                  <div
-                    key={j}
+                  color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity)})`,
+                }}
+              >
+                {/* These are purely spacers */}
+                {lines.slice(0, i).map((line, j) => {
+                  return (
+                    <div
+                      key={j}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        opacity: 0,
+                      }}
+                    >
+                      {j > 0 && (
+                        <Branch
+                          style={{
+                            ...branchStyle,
+                            color: `rgba(255,255,255,${minTextOpacity + ((j + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
+                          }}
+                        />
+                      )}
+                      <div
+                        style={{ fontSize: 16 }}
+                      >{`${line.slice(0, 1)}`}</div>
+                    </div>
+                  );
+                })}
+
+                {i > 0 && (
+                  <Branch
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      opacity: 0,
+                      ...branchStyle,
+                      color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
                     }}
-                  >
-                    {j > 0 && (
-                      <Branch
-                        style={{
-                          ...branchStyle,
-                          color: `rgba(255,255,255,${minTextOpacity + ((j + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
-                        }}
-                      />
-                    )}
-                    <div style={{ fontSize: 16 }}>{`${line.slice(0, 1)}`}</div>
-                  </div>
-                );
-              })}
-
-              {i > 0 && (
-                <Branch
-                  style={{
-                    ...branchStyle,
-                    color: `rgba(255,255,255,${minTextOpacity + ((i + 1) / acc.length) * (1 - minTextOpacity) - 0.2})`,
-                  }}
-                />
-              )}
-              {text}
-            </div>
-          );
-        })}
+                  />
+                )}
+                {text}
+              </div>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Achieve symmetrical layout against the other BirchdocsBadge */}
+      <BirchdocsBadge style={{ opacity: 0 }} />
     </div>,
     {
       width: 1200,
       height,
     },
+  );
+}
+
+function BirchdocsBadge({ style }: { style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        padding: "12px 28px",
+        // borderRadius: 9999,
+        backgroundColor: "#EAE9EB",
+        color: "#5B535F",
+        // color: "#EAE9EB",
+        fontSize: 32,
+        fontWeight: 700,
+        ...style,
+      }}
+    >
+      Birchdocs
+    </div>
   );
 }
 
