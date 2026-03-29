@@ -61,7 +61,6 @@ export async function GET(
           opacity: 1,
         }}
       />
-      <BirchdocsBadge />
 
       {/* Align the hierarchy to the vertical center of the remaining space */}
       <div
@@ -160,33 +159,38 @@ export async function GET(
         )}
       </div>
 
-      {/* Achieve symmetrical layout against the other BirchdocsBadge */}
-      <BirchdocsBadge style={{ opacity: 0 }} />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          position: "absolute",
+          bottom: "0px",
+          left: "0px",
+          right: "0px",
+          height: "60px",
+          paddingRight: "32px",
+          backgroundColor: "#5B535F",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexShrink: 0,
+            // color: "#5B535F",
+            color: "#EAE9EB",
+            fontSize: 32,
+            fontWeight: 700,
+          }}
+        >
+          Birchdocs
+        </div>
+      </div>
     </div>,
     {
       width: 1200,
       height,
     },
-  );
-}
-
-function BirchdocsBadge({ style }: { style?: CSSProperties }) {
-  return (
-    <div
-      style={{
-        flexShrink: 0,
-        padding: "12px 28px",
-        // borderRadius: 9999,
-        backgroundColor: "#EAE9EB",
-        color: "#5B535F",
-        // color: "#EAE9EB",
-        fontSize: 32,
-        fontWeight: 700,
-        ...style,
-      }}
-    >
-      Birchdocs
-    </div>
   );
 }
 
