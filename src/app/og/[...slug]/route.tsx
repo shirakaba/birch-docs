@@ -162,29 +162,18 @@ export async function GET(
       <div
         style={{
           display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
           position: "absolute",
-          bottom: "0px",
+          top: "0px",
           left: "0px",
           right: "0px",
           height: "60px",
-          paddingRight: "32px",
-          backgroundColor: "#5B535F",
+          paddingTop: "64px",
+          paddingLeft: "64px",
+          fontSize: "74px",
+          color: "white",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            flexShrink: 0,
-            // color: "#5B535F",
-            color: "#EAE9EB",
-            fontSize: 32,
-            fontWeight: 700,
-          }}
-        >
-          Birchdocs
-        </div>
+        Birchdocs
       </div>
     </div>,
     {
