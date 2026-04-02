@@ -17,18 +17,6 @@ This can happen upon running any Gradle command (whether in the IDE or via CLI).
 Output:
 
 ```
-> Configure project :
-[ExpoRootProject] Using the following versions:
-  - buildTools:  36.0.0
-  - minSdk:      24
-  - compileSdk:  36
-  - targetSdk:   36
-  - ndk:         27.1.12297006
-  - kotlin:      2.1.20
-  - ksp:         2.1.20-2.0.1
-
-[Incubating] Problems report is available at: file:///Users/jamie/Documents/git/banana/android/build/reports/problems/problems-report.html
-
 FAILURE: Build failed with an exception.
 
 * Where:
@@ -70,3 +58,30 @@ The solution is to stop the Gradle daemon:
 cd android
 ./gradlew --stop
 ```
+
+# Could not resolve project `:react-native-gesture-handler`.
+
+In a React Native project upon installing [React Native Gesture Handler](https://github.com/software-mansion/react-native-gesture-handler) (either directly, or transitively) the Expo (or React Native Community) CLI records it in the autolinking manifest `android/build/generated/autolinking/autolinking.json` at build time.
+
+You may experience this error if you later end up removing it (e.g. due to switching branch). The CLI sees it still recorded in the autolinking manifest, and goes to look for it at the specified filepath, only to find it no longer exists on disk.
+
+```
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not determine the dependencies of task ':app:compileDebugJavaWithJavac'.
+> Could not resolve all dependencies for configuration ':app:debugCompileClasspath'.
+   > Could not resolve project :react-native-gesture-handler.
+     Required by:
+         project :app
+      > No matching variant of project :react-native-gesture-handler was found. The consumer was configured to find a library for use during compile-time, preferably optimized for Android, as well as attribute 'com.android.build.api.attributes.AgpVersionAttr' with value '8.11.0', attribute 'com.android.build.api.attributes.BuildTypeAttr' with value 'debug', attribute 'org.jetbrains.kotlin.platform.type' with value 'androidJvm' but:
+          - No variants exist.
+```
+
+The solution is to force autolinking to re-run. Neither `./gradlew clean`, nor `./gradlew --stop` will do this for you. One simple way I found to do this was just to delete the whole build:
+
+```
+rm -rf android/build
+```
+
+I expect you could do it more minimally by deleting just the `android/build/generated/autolinking` subfolder, but I've not had a chance to verify.
