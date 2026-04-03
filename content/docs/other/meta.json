@@ -1,6 +1,0 @@
-{
-  "root": true,
-  "title": "Other",
-  "icon": "TentTree",
-  "pages": ["index", "---Subtopics---", "..."]
-}

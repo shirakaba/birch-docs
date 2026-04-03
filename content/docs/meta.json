@@ -1,9 +1,10 @@
 {
   "pages": [
     "index",
-    "---Topics---",
-    "dev",
-    "other",
+    "---Software Engineering---",
+    "...dev",
+    "---Other---",
+    "...other",
     "---Extra---",
     "licences",
     "links"
