@@ -12,6 +12,10 @@ export async function GET(
   context: { params: Promise<{ slug: Array<string> }> },
 ) {
   const { slug } = await context.params;
+  // Our OG metadata points crawlers at /og/dev/android/gradle/image.png, and
+  // source.getPage(['dev', 'android', 'gradle', 'image.png']) returns
+  // undefined, so we want to omit 'image.png'.
+  const pageSlug = slug.at(-1) === "image.png" ? slug.slice(0, -1) : slug;
 
   const height = 630;
   const minTextOpacity = 0.33;
@@ -19,11 +23,11 @@ export async function GET(
   // TODO: handle the case of having too many lines to display (more than 4~5?)
   const lines = new Array<string>();
 
-  console.log({ slug });
+  console.log({ slug, pageSlug });
 
   // Start from i === 1, because i === 0 is always just "Home".
-  for (let i = 1; i < slug.length; i++) {
-    const subslug = slug.slice(0, i + 1);
+  for (let i = 1; i < pageSlug.length; i++) {
+    const subslug = pageSlug.slice(0, i + 1);
     const page = source.getPage(subslug);
     console.log(`${i}:`, subslug, page?.data.title);
     if (!page) {
