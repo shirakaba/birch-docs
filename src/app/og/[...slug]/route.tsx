@@ -69,6 +69,16 @@ export async function GET(
         }}
       />
 
+      <div
+        style={{
+          display: "flex",
+          fontSize: "74px",
+          color: "white",
+        }}
+      >
+        Birchdocs
+      </div>
+
       {/* Align the hierarchy to the vertical center of the remaining space */}
       <div
         style={{
@@ -109,7 +119,7 @@ export async function GET(
                     whiteSpace: "pre",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
-                    fontSize: 32,
+                    fontSize: 40,
                     // @vercel/og only bundles Noto Sans 400, so this has no effect
                     fontWeight: i === acc.length - 1 ? 500 : 300,
 
@@ -160,23 +170,6 @@ export async function GET(
             {"Jamie's personal docs site"}
           </div>
         )}
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          position: "absolute",
-          top: "0px",
-          left: "0px",
-          right: "0px",
-          height: "60px",
-          paddingTop: "64px",
-          paddingLeft: "64px",
-          fontSize: "74px",
-          color: "white",
-        }}
-      >
-        Birchdocs
       </div>
     </div>,
     {
