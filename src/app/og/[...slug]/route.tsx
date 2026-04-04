@@ -55,6 +55,7 @@ export async function GET(
         backgroundColor: "#4D4D4D",
         fontFamily:
           "'SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        rowGap: "16px",
       }}
     >
       <BirchTree
@@ -87,10 +88,6 @@ export async function GET(
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-
-          // row-gap seems bugged along with `justifyContent: "space-between"`
-          marginTop: "24px",
-          marginBottom: "24px",
         }}
       >
         {lines.length ? (
@@ -100,7 +97,7 @@ export async function GET(
               flexDirection: "column",
               alignItems: "flex-start",
               justifyContent: "flex-start",
-              paddingLeft: "24px",
+              paddingLeft: "4px",
               rowGap: "12px",
             }}
           >
