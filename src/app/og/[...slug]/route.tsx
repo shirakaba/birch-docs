@@ -25,8 +25,11 @@ export async function GET(
 
   console.log({ slug, pageSlug });
 
-  // Start from i === 1, because i === 0 is always just "Home".
-  for (let i = 1; i < pageSlug.length; i++) {
+  for (let i = 0; i < pageSlug.length; i++) {
+    // Omit "Software Engineering" and "Other" categories from page hierarchy
+    if (i === 0 && (pageSlug[i] === "dev" || pageSlug[i] === "other")) {
+      continue;
+    }
     const subslug = pageSlug.slice(0, i + 1);
     const page = source.getPage(subslug);
     console.log(`${i}:`, subslug, page?.data.title);
@@ -95,10 +98,6 @@ export async function GET(
               const branchStyle: CSSProperties = {
                 marginRight: "0.33em",
               };
-
-              console.log(
-                `[${i}] "${text}": ${`rgba(255,255,255,${i + 1 / acc.length})`} (given acc.length ${acc.length})`,
-              );
 
               return (
                 <div
