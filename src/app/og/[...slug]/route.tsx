@@ -116,7 +116,7 @@ export async function GET(
                     whiteSpace: "pre",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
-                    fontSize: 40,
+                    fontSize: `${acc.length === 1 ? 60 : acc.length === 2 ? 50 : 40}px`,
                     // @vercel/og only bundles Noto Sans 400, so this has no effect
                     fontWeight: i === acc.length - 1 ? 500 : 300,
 
