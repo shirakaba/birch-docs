@@ -1,0 +1,83 @@
+---
+title: Sandboxing
+icon: Vault
+---
+
+Apple has two different systems for reducing privileges of macOS apps to improve security for users: the [App Sandbox](https://developer.apple.com/documentation/security/app-sandbox?language=objc) and the [Hardened Runtime](https://developer.apple.com/documentation/security/hardened-runtime?language=objc). While the Hardened Runtime is a requirement for distributing _outside_ of the Mac App Store, it is currently **optional** for the Mac App Store itself.
+
+## Which should I enable?
+
+I experimented with these options for an Electron app distributed on the Mac App Store. While I was able to enable App Sandbox, enabling the Hardened Runtime as well just led to the app crashing at launch. This mirrors the experience of another Electron user who reported that he'd had [no luck](https://github.com/electron/osx-sign/issues/188#issuecomment-513498412) enabling both App Sandbox and Hardened Runtime. In the end, he (and thus I also) went with:
+
+| Platform                            | App Sandbox | Hardened Runtime |
+| ----------------------------------- | ----------- | ---------------- |
+| Mac App Store (`mas`)               | enabled     | disabled         |
+| Third-party distribution (`darwin`) | disabled    | enabled          |
+
+For now, the Electron community does not seem to have discovered a way to enable both, and even [Visual Studio Code](https://github.com/microsoft/vscode/blob/e9daa2e0f3dd86459eea57aac3f5f181d065c06d/build/darwin/sign.js#L40) hasn't turned on both (they only do self-distribution, and just enable the Hardened Runtime but not the App Sandbox there).
+
+## How do they differ?
+
+Equivalent entitlements may be named somewhat differently between the two systems. Looking at Chromium's [entitlements](https://source.chromium.org/chromium/chromium/src/+/main:chrome/app/app-entitlements.plist), for example:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.device.bluetooth</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<key>com.apple.security.device.print</key>
+	<true/>
+	<key>com.apple.security.device.usb</key>
+	<true/>
+	<key>com.apple.security.personal-information.location</key>
+	<true/>
+	<key>com.apple.security.personal-information.photos-library</key>
+	<true/>
+</dict>
+</plist>
+```
+
+Here, they use [`com.apple.security.device.audio-input`](https://developer.apple.com/documentation/BundleResources/Entitlements/com.apple.security.device.audio-input?language=objc), which is a [Hardened Runtime](https://developer.apple.com/documentation/security/hardened-runtime?language=objc) entitlement that allows capturing audio from the microphone.
+
+However, when using App Sandbox, the equivalent entitlement would be [`com.apple.security.device.microphone`](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.device.microphone?language=objc).
+
+## Gotchas when shipping an Electron app to the Mac App Store
+
+Electron users have [found](https://github.com/electron-userland/electron-builder/issues/4040#issuecomment-669196137) that the following changes need to be made to `default.mas.plist`, as otherwise the app would simply crash at startup:
+
+```diff
+ <?xml version="1.0" encoding="UTF-8"?>
+ <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+ <plist version="1.0">
+   <dict>
+     <key>com.apple.security.app-sandbox</key>
+     <true/>
+     <key>com.apple.security.files.user-selected.read-write</key>
+     <true/>
+     <key>com.apple.security.files.bookmarks.app-scope</key>
+     <true/>
+     <key>com.apple.security.network.client</key>
+     <true/>
+     <key>com.apple.security.print</key>
+     <true/>
+     <key>com.apple.security.device.camera</key>
+     <true/>
+     <key>com.apple.security.device.microphone</key>
+     <true/>
+     <key>com.apple.security.device.usb</key>
+     <true/>
++    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
++    <true/>
++    <key>com.apple.security.cs.allow-jit</key>
++    <true/>
+   </dict>
+ </plist>
+```
+
+Technically, I think we only need one of the two entitlements (as they are tiered and one implies the other – as I believe Quinn explained on the Apple Developer Forums), but I've not taken the time to work out the minimum viable config.
