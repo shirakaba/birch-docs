@@ -1,0 +1,126 @@
+---
+title: Playwright
+icon: Drama
+---
+
+It's fairly [straightforward](https://www.electronjs.org/docs/latest/tutorial/automated-testing#using-playwright) to integrate Playwright's [Electron adapter](https://playwright.dev/docs/api/class-electron) into a vanilla Electron app, but less so for Electron Forge apps, which have the complication of needing to connect to the Forge packager (which manages a Webpack dev server).
+
+I've figured out a way to get that working. Basically, we create a plugin to claim the `startLogic` command (see [@electron-forge/core/src/util/plugin-interface.ts](https://github.com/electron/forge/blob/2be22fd4b350a25cbb52f55e1d3974f47f4e1d11/packages/api/core/src/util/plugin-interface.ts#L193) for how that works) and replace the standard start action (to launch Electron) with our own action (to launch Playwright, which itself launches Electron).
+
+So, here's how to do it. Starting with our Forge config:
+
+```ts
+// forge.config.ts
+
+const config: ForgeConfig = {
+  // …
+  plugins: [
+    // Set `e2e: true` to run Playwright E2E tests after the dev servers have
+    // started up, or `e2e: false` if you want to just launch your Electron app
+    // as normal.
+    new StartupPlugin({ e2e: true }),
+    // …
+  ],
+};
+```
+
+The Forge config depends on making the following `StartupPlugin`:
+
+```ts
+// StartupPlugin.ts
+
+import { PluginBase, type StartOptions } from "@electron-forge/plugin-base";
+import type {
+  ElectronProcess,
+  StartResult,
+} from "@electron-forge/shared-types";
+import {
+  type ChildProcess,
+  spawn,
+  type SpawnOptions,
+} from "node:child_process";
+
+interface StartupPluginConfig {
+  e2e: boolean;
+}
+
+class StartupPlugin extends PluginBase<StartupPluginConfig> {
+  name = "StartupPlugin";
+
+  constructor(public config: StartupPluginConfig) {
+    super(config);
+  }
+
+  async startLogic(startOptions: StartOptions) {
+    if (!this.config.e2e) {
+      // Defer to the default Electron startLogic().
+      return false;
+    }
+
+    const { dir } = startOptions;
+
+    const electronExecPath =
+      "node_modules/electron/dist/Electron.app/Contents/MacOS/Electron";
+
+    // Launch Playwright.
+    const spawnArgs = ["npx", "exec", "playwright", "test"];
+
+    // Any other spawn options, based on the `startOptions` received. Can see
+    // the exact logic here:
+    // https://github.com/electron/forge/blob/2be22fd4b350a25cbb52f55e1d3974f47f4e1d11/packages/api/core/src/api/start.ts#L221-L258
+    const spawnOptions: SpawnOptions = {};
+
+    const spawned = spawn(electronExecPath, spawnArgs, spawnOptions);
+
+    (spawned as ElectronProcess).restarted = false;
+
+    return spawned as StartResult;
+  }
+}
+```
+
+Having set it all up, we can then write tests like this:
+
+```ts
+// index.e2e.ts
+
+import { test, expect } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+import { _electron as electron } from "playwright";
+
+// To be clear: ideally you'd extract the setup and cleanup steps into a
+// reusable fixture. I'm just inlining it all here for demonstration.
+// https://playwright.dev/docs/test-fixtures#creating-a-fixture
+test("register button is visible", async ({ page }, { workerIndex }) => {
+  // 1. Setup
+  const userDataDir = path.resolve(
+    __dirname,
+    `user-data-dir/worker-${workerIndex}`,
+  );
+
+  await fs.mkdir(userDataDir, { recursive: true });
+
+  const electronApp = await electron.launch({
+    cwd: __dirname,
+    args: [`--user-data-dir=${userDataDir}`, "."],
+  });
+  const page = await electronApp.firstWindow();
+
+  // 2. Assertion
+  const button = page.getByRole("button", { name: "Register" });
+  await expect(button).toBeVisible();
+
+  // 3. Cleanup
+  await electronApp.close();
+  await fs.rm(userDataDir, { force: true, recursive: true });
+});
+```
+
+... and we can run them like:
+
+```sh
+# You may want to come up with an env var or flag so that we can stop
+# hard-coding `e2e: true` in the StartupPlugin passed in forge.config.ts.
+npx electron-forge start
+```
