@@ -1,0 +1,97 @@
+---
+title: Debugging
+icon: BugPlay
+---
+
+# Attaching a debugger
+
+Open the source code for your Android app in Android Studio (for React Native apps, I open the `android` folder).
+
+- To **build-and-run for debugging**, click `Debug 'app'` in the top-right of the Android Studio window.
+- To debug an **already-running app**, click `Attach Debugger to Android Process` in the top-right of the Android Studio window (or `Run > Attach to Process...` in the menubar).
+
+# When the debugger doesn't attach
+
+I very frequently experience timeouts with the debugger failing to attach. The written wisdom on this is to try restarting `adb`:
+
+```sh
+# Maybe quit Android Studio (not sure it's necessary), then:
+adb kill-server
+adb start-server
+# ... now reopen Android Studio and try to attach the debugger again.
+```
+
+I haven't had a chance to try this out yet, but will keep it in the bag.
+
+# If your React Native app isn't launching past the splash screen
+
+If your React Native app is stuck on the startup splash screen, it may look a lot like the app is waiting for a debugger to attach before it can run, but in reality, the debugger has attached fine and the app is just failing to load the JS bundle from Metro, so it _looks_ like nothing is happening. So let's sanity-check our Metro setup.
+
+## Set up the port mapping
+
+As usual, ensure that your device can actually connect to the Metro debugger by exposing http://localhost:8081 (on your dev machine) to the same address on your device (as specified in the React Native [docs](https://reactnative.dev/docs/running-on-device?platform=android)):
+
+```sh
+adb -s RFCY6077AXM reverse tcp:8081 tcp:8081
+```
+
+## Make sure Metro is actually running
+
+On top of that, you need to make sure that Metro is actually running in the first place. If you're used to running `expo android`, which starts Metro for you, you may be caught off-guard that triggering build-and-run from Android Studio doesn't do the same.
+
+While you _could_ just check all your active terminals to see whether Metro is running, if you want to be really smart (and learn a transferable skill in the process), you can hook your device logs to _confirm_ that the startup failure is due to inability to load the JS bundle. Here's how to do that:
+
+```sh
+adb -s RFCY6077AXM logcat -s ReactNative '*:E'
+```
+
+If your React Native app is indeed failing to connect to Metro, you should see some logs like these:
+
+<details>
+  <summary>Show logs</summary>
+
+```
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: Exception in native call
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: java.lang.RuntimeException: Unable to load script.
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative:
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: Make sure you're running Metro or that your bundle 'index.android.bundle' is packaged correctly for release.
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative:
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: The device must either be USB connected (with bundler set to "localhost:8081") or be on the same Wi-Fi network as your computer (with bundler set to your computer IP) to connect to Metro.
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative:
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: If you're using USB on a physical device, make sure you also run this command:
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative:   adb reverse tcp:8081 tcp:8081
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.ReactInstance.loadJSBundleFromAssets(Native Method)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.ReactInstance.access$loadJSBundleFromAssets(ReactInstance.kt:85)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.ReactInstance$loadJSBundle$1.loadScriptFromAssets(ReactInstance.kt:314)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.bridge.JSBundleLoader$Companion$createAssetLoader$1.loadScript(JSBundleLoader.kt:33)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.ReactInstance.loadJSBundle(ReactInstance.kt:293)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.ReactHostImpl.getOrCreateReactInstanceTask$lambda$41$lambda$38(ReactHostImpl.kt:939)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.ReactHostImpl.$r8$lambda$LQY77bFECGrnkUqd7Ku55sJ721A(Unknown Source:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.ReactHostImpl$$ExternalSyntheticLambda22.then(D8$$SyntheticClass:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeImmediately$lambda$3(Task.kt:356)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.$r8$lambda$b7MTC0ufkn_2TjF4BGcNqGR9qK0(Unknown Source:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion$$ExternalSyntheticLambda3.run(D8$$SyntheticClass:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Executors$ImmediateExecutor.execute(Executors.kt:41)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeImmediately(Task.kt:354)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.access$completeImmediately(Task.kt:250)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task.continueWith(Task.kt:132)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task.continueWith$default(Task.kt:117)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task.onSuccess$lambda$12(Task.kt:174)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task.$r8$lambda$l0wwo5AvbHxlwfI1R7CH_codxoo(Unknown Source:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$$ExternalSyntheticLambda2.then(D8$$SyntheticClass:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeAfterTask$lambda$5(Task.kt:390)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.$r8$lambda$IPpysnehFwANEiW061YzapkMdoE(Unknown Source:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at com.facebook.react.runtime.internal.bolts.Task$Companion$$ExternalSyntheticLambda4.run(D8$$SyntheticClass:0)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+06-15 16:32:37.562 19485 19533 E unknown:ReactNative: 	at java.lang.Thread.run(Thread.java:1564)
+```
+
+</details>
+
+To run Metro, simply run:
+
+```sh
+# Runs `expo start` or `rnc-cli start` under the hood
+node --run start
+```
